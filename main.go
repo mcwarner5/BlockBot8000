@@ -15,8 +15,13 @@
 
 package main
 
-import "github.com/saniales/golang-crypto-trading-bot/cmd"
+import (
+	bot "github.com/saniales/golang-crypto-trading-bot/cmd"
+	"github.com/saniales/golang-crypto-trading-bot/examples"
+	"github.com/saniales/golang-crypto-trading-bot/strategies"
+)
 
 func main() {
+	strategies.AddCustomStrategy(examples.Watch1Min)
 	bot.Execute()
 }

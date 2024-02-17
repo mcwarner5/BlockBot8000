@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/beldur/kraken-go-api-client"
+	krakenapi "github.com/beldur/kraken-go-api-client"
 	"github.com/fatih/structs"
 	"github.com/saniales/golang-crypto-trading-bot/environment"
 	"github.com/shopspring/decimal"
@@ -199,60 +199,78 @@ func (wrapper *KrakenWrapper) GetCandles(market *environment.Market) ([]environm
 	if !wrapper.websocketOn {
 		now := time.Now()
 
-		krakenTrades, err := wrapper.api.Trades(MarketNameFor(market, wrapper), now.Add(-time.Hour*24).Unix())
+		//krakenTrades, err := wrapper.api.Trades(MarketNameFor(market, wrapper), now.Add(-time.Hour*24).Unix())
+		krakenCandles, err := wrapper.api.OHLCWithInterval(MarketNameFor(market, wrapper), "1", now.Add(-time.Hour*24).Unix())
+
 		if err != nil {
 			return nil, err
 		}
 
-		trades := krakenTrades.Trades
+		ret := make([]environment.CandleStick, len(krakenCandles.OHLC))
 
-		for lastTradeTime := time.Unix(krakenTrades.Last, 0); lastTradeTime.Before(now); {
-			krakenTrades, err = wrapper.api.Trades(MarketNameFor(market, wrapper), now.Add(-time.Hour*24).Unix())
-			if err != nil {
-				return nil, err
-			}
-
-			trades = append(trades, krakenTrades.Trades...)
-		}
-
-		ret := make([]environment.CandleStick, 0, 50)
-
-		step := time.Minute * 30
-		start := time.Unix(krakenTrades.Trades[0].Time, 0)
-
-		var open = decimal.NewFromFloat(krakenTrades.Trades[0].PriceFloat)
-		var high = open
-		var low = open
-		var close decimal.Decimal
-
-		N := len(trades)
-		for i := 1; i < N; i++ {
-			currentTrade := trades[i]
-			candleTime := time.Unix(currentTrade.Time, 0)
-			isLastTrade := i == N-1
-
-			if candleTime.Before(start.Add(step)) || isLastTrade {
-				// aggregate candles from trades.
-				currentPrice := decimal.NewFromFloat(currentTrade.PriceFloat)
-				high = decimal.Max(high, currentPrice)
-				low = decimal.Min(low, currentPrice)
-			} else {
-				// add candle with aggregate data and reset.
-				previousTrade := trades[i-1]
-				close = decimal.NewFromFloat(previousTrade.PriceFloat)
-				ret = append(ret, environment.CandleStick{
-					High:  high,
-					Open:  open,
-					Close: close,
-					Low:   low,
-				})
-				open = decimal.NewFromFloat(currentTrade.PriceFloat)
-				high = decimal.NewFromFloat(0)
-				low = decimal.NewFromFloat(999999999)
+		for i, krakenCandle := range krakenCandles.OHLC {
+			ret[i] = environment.CandleStick{
+				High:       decimal.NewFromFloat(krakenCandle.High),
+				Open:       decimal.NewFromFloat(krakenCandle.Open),
+				Close:      decimal.NewFromFloat(krakenCandle.Close),
+				Low:        decimal.NewFromFloat(krakenCandle.Low),
+				Volume:     decimal.NewFromFloat(krakenCandle.Volume),
+				CandleTime: krakenCandles.OHLC[i].Time,
 			}
 		}
 
 		wrapper.candles.Set(market, ret)
+		/*
+			trades := krakenTrades.Trades
+
+			for lastTradeTime := time.Unix(krakenTrades.Last, 0); lastTradeTime.Before(now); {
+				krakenTrades, err = wrapper.api.Trades(MarketNameFor(market, wrapper), now.Add(-time.Hour*24).Unix())
+				if err != nil {
+					return nil, err
+				}
+
+				trades = append(trades, krakenTrades.Trades...)
+			}
+
+			ret := make([]environment.CandleStick, 0, 50)
+
+			step := time.Minute * 30
+			start := time.Unix(krakenTrades.Trades[0].Time, 0)
+
+			var open = decimal.NewFromFloat(krakenTrades.Trades[0].PriceFloat)
+			var high = open
+			var low = open
+			var close decimal.Decimal
+
+			N := len(trades)
+			for i := 1; i < N; i++ {
+				currentTrade := trades[i]
+				candleTime := time.Unix(currentTrade.Time, 0)
+				isLastTrade := i == N-1
+
+				if candleTime.Before(start.Add(step)) || isLastTrade {
+					// aggregate candles from trades.
+					currentPrice := decimal.NewFromFloat(currentTrade.PriceFloat)
+					high = decimal.Max(high, currentPrice)
+					low = decimal.Min(low, currentPrice)
+				} else {
+					// add candle with aggregate data and reset.
+					previousTrade := trades[i-1]
+					close = decimal.NewFromFloat(previousTrade.PriceFloat)
+					ret = append(ret, environment.CandleStick{
+						High:  high,
+						Open:  open,
+						Close: close,
+						Low:   low,
+					})
+					open = decimal.NewFromFloat(currentTrade.PriceFloat)
+					high = decimal.NewFromFloat(0)
+					low = decimal.NewFromFloat(999999999)
+				}
+			}
+
+			wrapper.candles.Set(market, ret)
+		*/
 	}
 
 	ret, candleLoaded := wrapper.candles.Get(market)
@@ -281,7 +299,7 @@ func (wrapper *KrakenWrapper) GetDepositAddress(coinTicker string) (string, bool
 
 // CalculateTradingFees calculates the trading fees for an order on a specified market.
 //
-//     NOTE: In Kraken fees are currently hardcoded.
+//	NOTE: In Kraken fees are currently hardcoded.
 func (wrapper *KrakenWrapper) CalculateTradingFees(market *environment.Market, amount float64, limit float64, orderType TradeType) float64 {
 	var feePercentage float64
 	if orderType == MakerTrade {

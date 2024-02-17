@@ -32,7 +32,7 @@ const (
 	MakerTrade = "maker"
 )
 
-//ExchangeWrapper provides a generic wrapper for exchange services.
+// ExchangeWrapper provides a generic wrapper for exchange services.
 type ExchangeWrapper interface {
 	Name() string                                                                    // Gets the name of the exchange.
 	GetCandles(market *environment.Market) ([]environment.CandleStick, error)        // Gets the candle data from the exchange.

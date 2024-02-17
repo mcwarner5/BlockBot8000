@@ -32,7 +32,7 @@ import (
 )
 
 // Watch5Sec prints out the info of the market every 5 seconds.
-var Watch5Sec = strategies.IntervalStrategy{
+var Watch5SecOrig = strategies.IntervalStrategy{
 	Model: strategies.StrategyModel{
 		Name: "Watch5Sec",
 		Setup: func(wrappers []exchanges.ExchangeWrapper, markets []*environment.Market) error {
@@ -40,10 +40,12 @@ var Watch5Sec = strategies.IntervalStrategy{
 			return nil
 		},
 		OnUpdate: func(wrappers []exchanges.ExchangeWrapper, markets []*environment.Market) error {
-			_, err := wrappers[0].GetMarketSummary(markets[0])
+
+			_, err := wrappers[0].GetMarketSummary(markets[0]) //TODO: why assume there's only 1 wrapper
 			if err != nil {
 				return err
 			}
+
 			logrus.Info(markets)
 			logrus.Info(wrappers)
 			return nil

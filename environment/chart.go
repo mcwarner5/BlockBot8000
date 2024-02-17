@@ -24,13 +24,14 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-//CandleStick represents a single candlestick in a chart.
+// CandleStick represents a single candlestick in a chart.
 type CandleStick struct {
-	High   decimal.Decimal //Represents the highest value obtained during candle period.
-	Open   decimal.Decimal //Represents the first value of the candle period.
-	Close  decimal.Decimal //Represents the last value of the candle period.
-	Low    decimal.Decimal //Represents the lowest value obtained during candle period.
-	Volume decimal.Decimal //Represents the volume of trades during the candle period.
+	High       decimal.Decimal //Represents the highest value obtained during candle period.
+	Open       decimal.Decimal //Represents the first value of the candle period.
+	Close      decimal.Decimal //Represents the last value of the candle period.
+	Low        decimal.Decimal //Represents the lowest value obtained during candle period.
+	Volume     decimal.Decimal //Represents the volume of trades during the candle period.
+	CandleTime time.Time       //the time  of the  trades
 }
 
 // String returns the string representation of the object.
@@ -43,16 +44,17 @@ func (cs CandleStick) String() string {
 	} else {
 		color = "Neutral"
 	}
-	ret := fmt.Sprintln(color, "Candle")
+	ret := fmt.Sprintln("Candle", color)
 	ret += fmt.Sprintln("High:", cs.High)
 	ret += fmt.Sprintln("Open:", cs.Open)
 	ret += fmt.Sprintln("Close:", cs.Close)
 	ret += fmt.Sprintln("Low:", cs.Low)
 	ret += fmt.Sprintln("Volume:", cs.Volume)
+	ret += fmt.Sprintln("Time:", cs.CandleTime)
 	return strings.TrimSpace(ret)
 }
 
-//CandleStickChart represents a chart of a market expresed using Candle Sticks.
+// CandleStickChart represents a chart of a market expresed using Candle Sticks.
 type CandleStickChart struct {
 	CandlePeriod time.Duration //Represents the candle period (expressed in time.Duration).
 	CandleSticks []CandleStick //Represents the last Candle Sticks used for evaluation of current state.

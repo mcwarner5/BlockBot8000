@@ -6,7 +6,7 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-//InitExchange initialize a new ExchangeWrapper binded to the specified exchange provided.
+// InitExchange initialize a new ExchangeWrapper binded to the specified exchange provided.
 func InitExchange(exchangeConfig environment.ExchangeConfig, simulatedMode bool, fakeBalances map[string]decimal.Decimal, depositAddresses map[string]string) exchanges.ExchangeWrapper {
 	if depositAddresses == nil && !simulatedMode {
 		return nil
@@ -28,6 +28,8 @@ func InitExchange(exchangeConfig environment.ExchangeConfig, simulatedMode bool,
 		exch = exchanges.NewHitBtcV2Wrapper(exchangeConfig.PublicKey, exchangeConfig.SecretKey, depositAddresses)
 	case "kucoin":
 		exch = exchanges.NewKucoinWrapper(exchangeConfig.PublicKey, exchangeConfig.SecretKey, depositAddresses)
+	case "kraken":
+		exch = exchanges.NewKrakenWrapper(exchangeConfig.PublicKey, exchangeConfig.SecretKey, depositAddresses)
 	default:
 		return nil
 	}
