@@ -1,0 +1,78 @@
+// Copyright © 2017 Alessandro Sanino <saninoale@gmail.com>
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program. If not, see <http://www.gnu.org/licenses/>.
+
+package environment
+
+import (
+	"github.com/shopspring/decimal"
+)
+
+type Balance struct {
+	Balance decimal.Decimal
+}
+
+// ExchangeConfig Represents a configuration for an API Connection to an exchange.
+//
+//	Can be used to generate an ExchangeWrapper.
+type ExchangeConfig struct {
+	ExchangeName     string                     `mapstructure:"exchange"`          // Represents the exchange name.
+	PublicKey        string                     `mapstructure:"public_key"`        // Represents the public key used to connect to Exchange API.
+	SecretKey        string                     `mapstructure:"secret_key"`        // Represents the secret key used to connect to Exchange API.
+	DepositAddresses map[string]string          `mapstructure:"deposit_addresses"` // Represents the bindings between coins and deposit address on the exchange.
+	FakeBalances     map[string]decimal.Decimal `mapstructure:"fake_balances"`     // Used only in simulation mode, fake starting balance [coin:balance].
+}
+
+type StrategyConfig struct {
+	Strategy string                 `mapstructure:"strategy"` // Represents the applied strategy name: must be unique in the system.
+	Markets  []MarketConfig         `mapstructure:"markets"`  // Represents the exchanges where the strategy is applied.
+	Spec     map[string]interface{} `mapstructure:"spec"`
+}
+
+type BaseSpecModel struct {
+	Name string `mapstructure:"name"`
+}
+
+// StrategyConfig contains where a strategy will be applied in the specified exchange.
+type IntervalStrategySpecModel struct {
+	BaseSpecModel `mapstructure:",squash"`
+	Interval      int `mapstructure:"interval"` // Represents the interval on which to run the strategy.
+}
+
+type ThresholdRebalancerSpecModel struct {
+	IntervalStrategySpecModel `mapstructure:",squash"`
+	AllowanceThreshold        decimal.Decimal `mapstructure:"allowance_threshold"`
+	MarketCapMultiplier       decimal.Decimal `mapstructure:"market_cap_multiplier"`
+	StaticCoin                string          `mapstructure:"static_coin"`
+	Portfolio                 map[string]int  `mapstructure:"portfolio_ratio_percent"`
+}
+
+// MarketConfig contains all market configuration data.
+type MarketConfig struct {
+	Name      string                   `mapstructure:"market"`   // Represents the market where the strategy is applied.
+	Exchanges []ExchangeBindingsConfig `mapstructure:"bindings"` // Represents the list of markets where the strategy is applied, along with extra-data regarding binded exchanges.
+}
+
+// ExchangeBindingsConfig represents the binding of market names between bot notation and exchange ticker.
+type ExchangeBindingsConfig struct {
+	Name       string `mapstructure:"exchange"`    // Represents the name of the exchange.
+	MarketName string `mapstructure:"market_name"` // Represents the name of the market as seen from the exchange.
+}
+
+// BotConfig contains all config data of the bot, which can be also loaded from config file.
+type BotConfig struct {
+	SimulationModeOn bool             `mapstructure:"simulation_mode"`  // if true, do not create real orders and do not get real balance
+	ExchangeConfigs  []ExchangeConfig `mapstructure:"exchange_configs"` // Represents the current exchange configuration.
+	Strategies       []StrategyConfig `mapstructure:"strategies"`       // Represents the current strategies adopted by the bot.
+}

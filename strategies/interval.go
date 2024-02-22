@@ -16,7 +16,8 @@
 package strategies
 
 import (
-	"errors"
+	"fmt"
+	"reflect"
 	"time"
 
 	"github.com/saniales/golang-crypto-trading-bot/environment"
@@ -25,55 +26,27 @@ import (
 
 // IntervalStrategy is an interval based strategy.
 type IntervalStrategy struct {
-	Model    StrategyModel
-	Interval time.Duration
+	StrategyModel
+	Interval int
 }
 
-// Name returns the name of the strategy.
-func (is IntervalStrategy) Name() string {
-	return is.Model.Name
-}
-
-// String returns a string representation of the object.
 func (is IntervalStrategy) String() string {
-	return is.Name()
+	return "Type: " + reflect.TypeOf(is).String() + " Name:" + is.GetName()
 }
 
-// Apply executes Cyclically the On Update, basing on provided interval.
-func (is IntervalStrategy) Apply(wrappers []exchanges.ExchangeWrapper, markets []*environment.Market) {
-	var err error
+func (is IntervalStrategy) OnUpdate(wrappers []exchanges.ExchangeWrapper, markets []*environment.Market) error {
+	fmt.Println("OnUpdate " + is.String())
 
-	hasSetupFunc := is.Model.Setup != nil
-	hasTearDownFunc := is.Model.TearDown != nil
-	hasUpdateFunc := is.Model.OnUpdate != nil
-	hasErrorFunc := is.Model.OnError != nil
+	var sleep_len = time.Duration(is.Interval) * time.Minute
+	time.Sleep(sleep_len)
+	return nil
+}
 
-	if hasSetupFunc {
-		err = is.Model.Setup(wrappers, markets)
-		if err != nil && hasErrorFunc {
-			is.Model.OnError(err)
-		}
-	}
+func NewIntervalStrategy(raw_strat environment.StrategyConfig) *IntervalStrategy {
+	//TODO validation
 
-	if !hasUpdateFunc {
-		_err := errors.New("OnUpdate func cannot be empty")
-		if hasErrorFunc {
-			is.Model.OnError(_err)
-		} else {
-			panic(_err)
-		}
-	}
-	for err == nil {
-		err = is.Model.OnUpdate(wrappers, markets)
-		if err != nil && hasErrorFunc {
-			is.Model.OnError(err)
-		}
-		time.Sleep(is.Interval)
-	}
-	if hasTearDownFunc {
-		err = is.Model.TearDown(wrappers, markets)
-		if err != nil && hasErrorFunc {
-			is.Model.OnError(err)
-		}
+	return &IntervalStrategy{
+		StrategyModel: *NewBaseStrategy(raw_strat),
+		Interval:      raw_strat.Spec["interval"].(int),
 	}
 }

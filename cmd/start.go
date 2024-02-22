@@ -17,16 +17,17 @@ package bot
 
 import (
 	"fmt"
-	"io"
-	"os"
+	"reflect"
 	"strings"
 
+	"github.com/mitchellh/mapstructure"
 	helpers "github.com/saniales/golang-crypto-trading-bot/bot_helpers"
 	"github.com/saniales/golang-crypto-trading-bot/environment"
 	"github.com/saniales/golang-crypto-trading-bot/exchanges"
 	"github.com/saniales/golang-crypto-trading-bot/strategies"
+	"github.com/shopspring/decimal"
 	"github.com/spf13/cobra"
-	"gopkg.in/yaml.v2"
+	viper "github.com/spf13/viper"
 )
 
 // startCmd represents the start command
@@ -41,23 +42,51 @@ var botConfig environment.BotConfig
 
 func init() {
 	RootCmd.AddCommand(startCmd)
-
 	startCmd.Flags().BoolVarP(&startFlags.Simulate, "simulate", "s", false, "Simulates the trades instead of actually doing them")
 }
 
+func DecimalHookFunction(f reflect.Type, t reflect.Type, data interface{}) (interface{}, error) {
+	if t != reflect.TypeOf(decimal.Decimal{}) {
+		return data, nil
+	}
+
+	switch f.Kind() {
+	case reflect.Int:
+		return decimal.NewFromInt(int64(data.(int))), nil
+	case reflect.Int64:
+		return decimal.NewFromInt(data.(int64)), nil
+	case reflect.Float64:
+		return decimal.NewFromFloat(data.(float64)), nil
+	case reflect.String:
+		return decimal.NewFromString(data.(string))
+	default:
+		return data, nil
+	}
+
+}
+
 func initConfigs() error {
-	configFile, err := os.Open(GlobalFlags.ConfigFile)
+
+	hooks := mapstructure.ComposeDecodeHookFunc(
+		DecimalHookFunction,
+	)
+
+	viper.SetConfigType("yaml")
+	viper.SetConfigFile(GlobalFlags.ConfigFile)
+	err := viper.ReadInConfig()
+
 	if err != nil {
 		return err
 	}
-	contentToMarshal, err := io.ReadAll(configFile)
+
+	err = viper.Unmarshal(&botConfig, viper.DecodeHook(hooks))
+
 	if err != nil {
 		return err
 	}
-	err = yaml.Unmarshal(contentToMarshal, &botConfig)
-	if err != nil {
-		return err
-	}
+
+	fmt.Println("DONE")
+
 	return nil
 }
 
@@ -93,7 +122,8 @@ func executeStartCommand(cmd *cobra.Command, args []string) {
 				mkts[i].ExchangeNames[exName.Name] = exName.MarketName
 			}
 		}
-		err := strategies.MatchWithMarkets(strategyConf.Strategy, mkts)
+
+		err := strategies.MatchWithMarkets(strategies.AddCustomStrategy(helpers.InitStrategy(strategyConf)), mkts)
 		if err != nil {
 			fmt.Println("Cannot add tactic : ", err)
 		}

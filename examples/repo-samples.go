@@ -15,22 +15,7 @@
 
 package examples
 
-import (
-	"context"
-	"fmt"
-	"log"
-	"time"
-
-	"github.com/bwmarrin/discordgo"
-	"github.com/saniales/golang-crypto-trading-bot/environment"
-	"github.com/saniales/golang-crypto-trading-bot/exchanges"
-	"github.com/saniales/golang-crypto-trading-bot/strategies"
-	"github.com/shomali11/slacker"
-	"github.com/sirupsen/logrus"
-	"github.com/slack-go/slack"
-	tb "gopkg.in/tucnak/telebot.v2"
-)
-
+/*
 // Watch5Sec prints out the info of the market every 5 seconds.
 var Watch5SecOrig = strategies.IntervalStrategy{
 	Model: strategies.StrategyModel{
@@ -121,12 +106,12 @@ var TelegramIntegrationExample = strategies.IntervalStrategy{
 				Username: "YOUR-USERNAME-GROUP-OR-USER",
 			}, "OMG SOMETHING HAPPENING!!!!!", tb.SendOptions{})
 
-			/*
+
 				// Optionally it can have options
 				telegramBot.Send(tb.User{
 					Username: "YOUR-JOINED-GROUP-USERNAME",
 				}, "OMG SOMETHING HAPPENING!!!!!", tb.SendOptions{})
-			*/
+
 			return nil
 		},
 		OnError: func(err error) {
@@ -188,3 +173,4 @@ var DiscordIntegrationExample = strategies.IntervalStrategy{
 		},
 	},
 }
+*/

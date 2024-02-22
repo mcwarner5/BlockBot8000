@@ -16,6 +16,7 @@
 package strategies
 
 import (
+	"errors"
 	"fmt"
 	"sync"
 
@@ -28,22 +29,55 @@ var appliedTactics []Tactic
 
 // Strategy represents a generic strategy.
 type Strategy interface {
-	Name() string                                             // Name returns the name of the strategy.
-	Apply([]exchanges.ExchangeWrapper, []*environment.Market) // Apply applies the strategy when called, using the specified wrapper.
+	//CreateFromSpec(environment.BaseStrategyConfig) Strategy
+	GetName() string // Name returns the name of the strategy.
+	//Apply([]exchanges.ExchangeWrapper, []*environment.Market) // Apply applies the strategy when called, using the specified wrapper.
+	Setup([]exchanges.ExchangeWrapper, []*environment.Market) error
+	TearDown([]exchanges.ExchangeWrapper, []*environment.Market) error
+	OnUpdate([]exchanges.ExchangeWrapper, []*environment.Market) error
+	OnError(error)
 }
 
-// StrategyFunc represents a standard function binded to a strategy model execution.
-//
-//     Can define a Setup, TearDown and Update behaviour.
-type StrategyFunc func([]exchanges.ExchangeWrapper, []*environment.Market) error
-
-//StrategyModel represents a strategy model used by strategies.
+// StrategyModel represents a strategy model used by strategies.
 type StrategyModel struct {
-	Name     string
-	Setup    StrategyFunc
-	TearDown StrategyFunc
-	OnUpdate StrategyFunc
-	OnError  func(error)
+	Name string
+}
+
+func NewBaseStrategy(raw_strat environment.StrategyConfig) *StrategyModel {
+	return &StrategyModel{
+		Name: raw_strat.Spec["name"].(string),
+	}
+}
+
+// Name returns the name of the strategy.
+func (is StrategyModel) GetName() string {
+	return is.Name
+}
+
+// String returns a string representation of the object.
+func (is StrategyModel) String() string {
+	return is.GetName()
+}
+
+// Apply executes Cyclically the On Update, basing on provided interval.
+
+func (is StrategyModel) Setup(wrappers []exchanges.ExchangeWrapper, markets []*environment.Market) error {
+	fmt.Println("Base Setup")
+	return nil
+}
+
+func (is StrategyModel) OnUpdate(wrappers []exchanges.ExchangeWrapper, markets []*environment.Market) error {
+	return errors.New("BaseStrategy OnUpdate not implemented")
+}
+
+func (is StrategyModel) OnError(err error) {
+	fmt.Println("Base OnError")
+	fmt.Println(err)
+}
+
+func (is StrategyModel) TearDown(wrappers []exchanges.ExchangeWrapper, markets []*environment.Market) error {
+	fmt.Println("Base TearDown")
+	return nil
 }
 
 // Tactic represents the effective appliance of a strategy.
@@ -54,7 +88,7 @@ type Tactic struct {
 
 // Execute executes effectively a tactic.
 func (t *Tactic) Execute(wrappers []exchanges.ExchangeWrapper) {
-	t.Strategy.Apply(wrappers, t.Markets)
+	Apply(wrappers, t.Strategy, t.Markets)
 }
 
 func init() {
@@ -62,8 +96,9 @@ func init() {
 }
 
 // AddCustomStrategy adds a strategy to the available set.
-func AddCustomStrategy(s Strategy) {
-	available[s.Name()] = s
+func AddCustomStrategy(s Strategy) string {
+	available[s.GetName()] = s
+	return s.GetName()
 }
 
 // MatchWithMarkets matches a strategy with the markets.
@@ -77,6 +112,28 @@ func MatchWithMarkets(strategyName string, markets []*environment.Market) error 
 		Strategy: s,
 	})
 	return nil
+}
+
+func Apply(wrappers []exchanges.ExchangeWrapper, strategy Strategy, markets []*environment.Market) {
+	var err error
+
+	err = strategy.Setup(wrappers, markets)
+	if err != nil {
+		strategy.OnError(err)
+	}
+
+	for err == nil {
+		err = strategy.OnUpdate(wrappers, markets)
+		if err != nil {
+			strategy.OnError(err)
+		}
+	}
+
+	err = strategy.TearDown(wrappers, markets)
+	if err != nil {
+		strategy.OnError(err)
+	}
+
 }
 
 // ApplyAllStrategies applies all matched strategies concurrently.

@@ -19,6 +19,8 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/mitchellh/mapstructure"
+	viper "github.com/spf13/viper"
 	yaml "gopkg.in/yaml.v2"
 
 	"github.com/saniales/golang-crypto-trading-bot/environment"
@@ -56,8 +58,24 @@ func initConfig() {
 			fmt.Println()
 			return
 		}
-		var checker environment.BotConfig
-		err = yaml.Unmarshal(content, &checker)
+		//var checker environment.BotConfig
+		viper.SetConfigType("yaml")
+		viper.SetConfigFile(GlobalFlags.ConfigFile)
+		err = viper.ReadInConfig()
+		if err != nil {
+			fmt.Print("Error while opening the config file provided")
+			return
+		}
+		hooks := mapstructure.ComposeDecodeHookFunc(
+			DecimalHookFunction,
+		)
+
+		err = viper.Unmarshal(&botConfig, viper.DecodeHook(hooks))
+
+		if err != nil {
+			fmt.Print("Error Unmarshalling the config file provided")
+		}
+		//err = yaml.Unmarshal(content, &checker)
 		if err != nil {
 			fmt.Print("Cannot load provided configuration file")
 			if GlobalFlags.Verbose > 0 {

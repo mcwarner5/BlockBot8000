@@ -15,13 +15,7 @@
 
 package examples
 
-import (
-	"github.com/saniales/golang-crypto-trading-bot/environment"
-	"github.com/saniales/golang-crypto-trading-bot/exchanges"
-	"github.com/saniales/golang-crypto-trading-bot/strategies"
-	"github.com/sirupsen/logrus"
-)
-
+/*
 // Websocket strategy
 var Websocket = strategies.WebsocketStrategy{
 	Model: strategies.StrategyModel{
@@ -48,3 +42,4 @@ var Websocket = strategies.WebsocketStrategy{
 		},
 	},
 }
+*/

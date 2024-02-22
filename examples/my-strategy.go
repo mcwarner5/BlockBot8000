@@ -17,7 +17,6 @@ package examples
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/saniales/golang-crypto-trading-bot/environment"
 	"github.com/saniales/golang-crypto-trading-bot/exchanges"
@@ -26,48 +25,60 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// Watch5Sec prints out the info of the market every 5 seconds.
-var Watch1Min = strategies.IntervalStrategy{
-	Model: strategies.StrategyModel{
-		Name: "Watch1Min",
-		Setup: func(wrappers []exchanges.ExchangeWrapper, markets []*environment.Market) error {
-			fmt.Println("Watch1Min starting")
-			return nil
-		},
-		OnUpdate: func(wrappers []exchanges.ExchangeWrapper, markets []*environment.Market) error {
+type PullMarketData struct {
+	strategies.IntervalStrategy
+	CandlesEnabled bool
+}
 
-			markets_info := make([]environment.MarketSummary, 0, len(markets))
-			//candles_info := make([]environment.CandleStickChart, 0, len(markets))
+func NewPullMarketData(raw_strat environment.StrategyConfig) strategies.Strategy {
+	//TODO validation
+	//return strategies.NewIntervalStrategy(raw_strat)
 
-			for _, market := range markets {
-				data, err := wrappers[0].GetMarketSummary(market)
-				if err != nil {
-					return err
-				}
-				markets_info = append(markets_info, *data)
+	return &PullMarketData{
+		IntervalStrategy: *strategies.NewIntervalStrategy(raw_strat),
+		CandlesEnabled:   false,
+	}
+}
 
-				_, err2 := wrappers[0].GetCandles(market)
-				if err2 != nil {
-					return err
-				}
-				//candles_info = append(candles_info, *candles)
-			}
+func (is PullMarketData) Setup(wrappers []exchanges.ExchangeWrapper, markets []*environment.Market) error {
+	fmt.Println("PullMarketData starting")
+	return nil
+}
 
-			for i, market := range markets {
-				logrus.Info(market)
-				logrus.Info(markets_info[i])
-			}
+func (is PullMarketData) OnUpdate(wrappers []exchanges.ExchangeWrapper, markets []*environment.Market) error {
 
-			logrus.Info(wrappers)
-			return nil
-		},
-		OnError: func(err error) {
-			fmt.Println(err)
-		},
-		TearDown: func(wrappers []exchanges.ExchangeWrapper, markets []*environment.Market) error {
-			fmt.Println("Watch1Min exited")
-			return nil
-		},
-	},
-	Interval: time.Second * 60,
+	markets_info := make([]environment.MarketSummary, 0, len(markets))
+	//candles_info := make([]environment.CandleStickChart, 0, len(markets))
+
+	for _, market := range markets {
+		data, err := wrappers[0].GetMarketSummary(market)
+		if err != nil {
+			return err
+		}
+		markets_info = append(markets_info, *data)
+
+		_, err2 := wrappers[0].GetCandles(market)
+		if err2 != nil {
+			return err
+		}
+		//candles_info = append(candles_info, *candles)
+	}
+
+	for i, market := range markets {
+		logrus.Info(market)
+		logrus.Info(markets_info[i])
+	}
+
+	logrus.Info(wrappers)
+	is.IntervalStrategy.OnUpdate(wrappers, markets)
+	return nil
+}
+
+func (is PullMarketData) OnError(err error) {
+	fmt.Println(err)
+}
+
+func (is PullMarketData) TearDown(wrappers []exchanges.ExchangeWrapper, markets []*environment.Market) error {
+	fmt.Println("Watch1Min exited")
+	return nil
 }
