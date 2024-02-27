@@ -23,7 +23,7 @@ import (
 	viper "github.com/spf13/viper"
 	yaml "gopkg.in/yaml.v2"
 
-	"github.com/saniales/golang-crypto-trading-bot/environment"
+	"github.com/mcwarner5/BlockBot8000/environment"
 	"github.com/spf13/cobra"
 )
 

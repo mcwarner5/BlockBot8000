@@ -13,14 +13,15 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-package strategies
+package intervalstrategies
 
 import (
 	"fmt"
 	"reflect"
 
-	"github.com/saniales/golang-crypto-trading-bot/environment"
-	"github.com/saniales/golang-crypto-trading-bot/exchanges"
+	"github.com/mcwarner5/BlockBot8000/environment"
+	"github.com/mcwarner5/BlockBot8000/exchanges"
+	"github.com/mcwarner5/BlockBot8000/strategies"
 	"github.com/shopspring/decimal"
 )
 
@@ -60,7 +61,7 @@ func (is RebalancerStrategy) TearDown(wrappers []exchanges.ExchangeWrapper, mark
 	return nil
 }
 
-func NewRebalancerStrategy(raw_strat environment.StrategyConfig) Strategy {
+func NewRebalancerStrategy(raw_strat environment.StrategyConfig) strategies.Strategy {
 	//TODO validation
 
 	return &RebalancerStrategy{

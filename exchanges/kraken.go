@@ -20,9 +20,9 @@ import (
 	"fmt"
 	"time"
 
-	krakenapi "github.com/beldur/kraken-go-api-client"
 	"github.com/fatih/structs"
-	"github.com/saniales/golang-crypto-trading-bot/environment"
+	"github.com/mcwarner5/BlockBot8000/environment"
+	krakenapi "github.com/mcwarner5/BlockBot8000/libraries/kraken-go-api-client"
 	"github.com/shopspring/decimal"
 )
 
@@ -197,10 +197,9 @@ func (wrapper *KrakenWrapper) GetMarketSummary(market *environment.Market) (*env
 // GetCandles gets the candle data from the exchange.
 func (wrapper *KrakenWrapper) GetCandles(market *environment.Market) ([]environment.CandleStick, error) {
 	if !wrapper.websocketOn {
-		now := time.Now()
-
+		//now := time.Now()
 		//krakenTrades, err := wrapper.api.Trades(MarketNameFor(market, wrapper), now.Add(-time.Hour*24).Unix())
-		krakenCandles, err := wrapper.api.OHLCWithInterval(MarketNameFor(market, wrapper), "1", now.Add(-time.Hour*24).Unix())
+		krakenCandles, err := wrapper.api.OHLCWithInterval(MarketNameFor(market, wrapper), "1") //, now.Add(-time.Hour*24).Unix())
 
 		if err != nil {
 			return nil, err
@@ -275,7 +274,7 @@ func (wrapper *KrakenWrapper) GetCandles(market *environment.Market) ([]environm
 
 	ret, candleLoaded := wrapper.candles.Get(market)
 	if !candleLoaded {
-		return nil, errors.New("No candle data yet")
+		return nil, errors.New("no candle data yet")
 	}
 
 	return ret, nil

@@ -10,7 +10,7 @@ import (
 	"github.com/shopspring/decimal"
 
 	bitfinex "github.com/bitfinexcom/bitfinex-api-go/v1"
-	"github.com/saniales/golang-crypto-trading-bot/environment"
+	"github.com/mcwarner5/BlockBot8000/environment"
 )
 
 // BitfinexWrapper provides a Generic wrapper of the Bitfinex API.
@@ -110,7 +110,7 @@ func (wrapper *BitfinexWrapper) GetOrderBook(market *environment.Market) (*envir
 
 	orderbook, exists := wrapper.orderbook.Get(market)
 	if !exists {
-		return nil, errors.New("Orderbook not loaded")
+		return nil, errors.New("orderbook not loaded")
 	}
 
 	return orderbook, nil
@@ -203,7 +203,7 @@ func (wrapper *BitfinexWrapper) GetMarketSummary(market *environment.Market) (*e
 
 	ret, exists := wrapper.summaries.Get(market)
 	if !exists {
-		return nil, errors.New("Summary not loaded")
+		return nil, errors.New("summary not loaded")
 	}
 
 	return ret, nil
@@ -232,7 +232,7 @@ func (wrapper *BitfinexWrapper) GetBalance(symbol string) (*decimal.Decimal, err
 		}
 	}
 
-	return nil, errors.New("Symbol not found")
+	return nil, errors.New("symbol not found")
 }
 
 // GetDepositAddress gets the deposit address for the specified coin on the exchange.
@@ -243,7 +243,7 @@ func (wrapper *BitfinexWrapper) GetDepositAddress(coinTicker string) (string, bo
 
 // CalculateTradingFees calculates the trading fees for an order on a specified market.
 //
-//     NOTE: In Bitfinex fees are currently hardcoded.
+//	NOTE: In Bitfinex fees are currently hardcoded.
 func (wrapper *BitfinexWrapper) CalculateTradingFees(market *environment.Market, amount float64, limit float64, orderType TradeType) float64 {
 	var feePercentage float64
 	if orderType == MakerTrade {

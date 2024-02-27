@@ -1,10 +1,10 @@
 package helpers
 
 import (
-	"github.com/saniales/golang-crypto-trading-bot/environment"
-	"github.com/saniales/golang-crypto-trading-bot/examples"
-	"github.com/saniales/golang-crypto-trading-bot/exchanges"
-	"github.com/saniales/golang-crypto-trading-bot/strategies"
+	"github.com/mcwarner5/BlockBot8000/environment"
+	"github.com/mcwarner5/BlockBot8000/exchanges"
+	"github.com/mcwarner5/BlockBot8000/intervalstrategies"
+	"github.com/mcwarner5/BlockBot8000/strategies"
 	"github.com/shopspring/decimal"
 )
 
@@ -49,9 +49,9 @@ func InitExchange(exchangeConfig environment.ExchangeConfig, simulatedMode bool,
 func InitStrategy(rawStrategy environment.StrategyConfig) strategies.Strategy {
 	switch rawStrategy.Strategy {
 	case "PullMarketData":
-		return examples.NewPullMarketData(rawStrategy)
+		return intervalstrategies.NewPullMarketData(rawStrategy)
 	case "RebalancerStrategy":
-		return strategies.NewRebalancerStrategy(rawStrategy)
+		return intervalstrategies.NewRebalancerStrategy(rawStrategy)
 	default:
 		return nil
 	}

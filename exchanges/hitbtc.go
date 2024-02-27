@@ -23,8 +23,8 @@ import (
 	"github.com/gofrs/uuid"
 
 	"github.com/juju/errors"
+	"github.com/mcwarner5/BlockBot8000/environment"
 	"github.com/saniales/go-hitbtc"
-	"github.com/saniales/golang-crypto-trading-bot/environment"
 	"github.com/shopspring/decimal"
 )
 
@@ -113,7 +113,7 @@ func (wrapper *HitBtcWrapperV2) GetOrderBook(market *environment.Market) (*envir
 	}
 
 	if !exists {
-		return nil, errors.New("Orderbook not loaded")
+		return nil, errors.New("orderbook not loaded")
 	}
 
 	return ret, nil
@@ -240,7 +240,7 @@ func (wrapper *HitBtcWrapperV2) GetMarketSummary(market *environment.Market) (*e
 	}
 
 	if !exists {
-		return nil, errors.New("Summary not loaded")
+		return nil, errors.New("summary not loaded")
 	}
 
 	return ret, nil
@@ -265,7 +265,7 @@ func (wrapper *HitBtcWrapperV2) GetBalance(symbol string) (*decimal.Decimal, err
 		}
 	}
 
-	return nil, errors.New("Symbol not found")
+	return nil, errors.New("symbol not found")
 }
 
 // GetDepositAddress gets the deposit address for the specified coin on the exchange.

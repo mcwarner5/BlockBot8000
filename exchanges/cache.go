@@ -3,7 +3,7 @@ package exchanges
 import (
 	"sync"
 
-	"github.com/saniales/golang-crypto-trading-bot/environment"
+	"github.com/mcwarner5/BlockBot8000/environment"
 )
 
 // SummaryCache represents a local summary cache for every exchange. To allow dinamic polling from multiple sources (REST + Websocket)

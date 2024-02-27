@@ -18,7 +18,7 @@ package exchanges
 import (
 	"errors"
 
-	"github.com/saniales/golang-crypto-trading-bot/environment"
+	"github.com/mcwarner5/BlockBot8000/environment"
 	"github.com/shopspring/decimal"
 	"github.com/thebotguys/golang-bittrex-api/bittrex"
 )
@@ -86,12 +86,12 @@ func (wrapper *BittrexWrapperV2) BuyMarket(market *environment.Market, amount fl
 
 // SellLimit performs a limit sell action.
 func (wrapper *BittrexWrapperV2) SellLimit(market *environment.Market, amount float64, limit float64) (string, error) {
-	return "", errors.New("SellLimit not implemented")
+	return "", errors.New("sellLimit not implemented")
 }
 
 // SellMarket performs a market sell action.
 func (wrapper *BittrexWrapperV2) SellMarket(market *environment.Market, amount float64) (string, error) {
-	return "", errors.New("SellMarket not implemented")
+	return "", errors.New("sellMarket not implemented")
 }
 
 // GetMarketSummary gets the current market summary.
@@ -150,7 +150,7 @@ func (wrapper *BittrexWrapperV2) GetDepositAddress(coinTicker string) (string, b
 
 // CalculateTradingFees calculates the trading fees for an order on a specified market.
 //
-//     NOTE: In Bittrex fees are hardcoded due to the inability to obtain them via API before placing an order.
+//	NOTE: In Bittrex fees are hardcoded due to the inability to obtain them via API before placing an order.
 func (wrapper *BittrexWrapperV2) CalculateTradingFees(market *environment.Market, amount float64, limit float64, orderType TradeType) float64 {
 	var feePercentage float64
 	if orderType == MakerTrade {
@@ -171,7 +171,7 @@ func (wrapper *BittrexWrapperV2) CalculateWithdrawFees(market *environment.Marke
 
 // FeedConnect connects to the feed of the exchange.
 //
-//     NOTE: Not supported on Bittrex v1 API, use *BittrexWrapperV2.
+//	NOTE: Not supported on Bittrex v1 API, use *BittrexWrapperV2.
 func (wrapper *BittrexWrapperV2) FeedConnect(markets []*environment.Market) error {
 	return ErrWebsocketNotSupported
 }

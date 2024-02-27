@@ -20,8 +20,8 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/saniales/golang-crypto-trading-bot/environment"
-	"github.com/saniales/golang-crypto-trading-bot/exchanges"
+	"github.com/mcwarner5/BlockBot8000/environment"
+	"github.com/mcwarner5/BlockBot8000/exchanges"
 )
 
 var available map[string]Strategy //mapped name -> strategy

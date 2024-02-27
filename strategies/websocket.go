@@ -1,15 +1,13 @@
 package strategies
 
 import (
-	"errors"
-
-	"github.com/saniales/golang-crypto-trading-bot/environment"
-	"github.com/saniales/golang-crypto-trading-bot/exchanges"
+	"github.com/mcwarner5/BlockBot8000/environment"
+	"github.com/mcwarner5/BlockBot8000/exchanges"
 )
 
 // WebsocketStrategy polls data from a websocket in real-time.
 //
-//     NOTE: The update function must be handled in the websocket strategy-model.
+//	NOTE: The update function must be handled in the websocket strategy-model.
 type WebsocketStrategy struct {
 	Model StrategyModel
 }
@@ -26,7 +24,7 @@ func (wss WebsocketStrategy) String() string {
 
 // Apply executes Cyclically the On Update, basing on provided interval.
 func (wss WebsocketStrategy) Apply(wrappers []exchanges.ExchangeWrapper, markets []*environment.Market) {
-	var err error
+	/*var err error
 
 	hasSetupFunc := wss.Model.Setup != nil
 	hasTearDownFunc := wss.Model.TearDown != nil
@@ -55,5 +53,5 @@ func (wss WebsocketStrategy) Apply(wrappers []exchanges.ExchangeWrapper, markets
 		if err != nil && hasErrorFunc {
 			wss.Model.OnError(err)
 		}
-	}
+	}*/
 }

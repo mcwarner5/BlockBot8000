@@ -1,0 +1,69 @@
+simulation_mode: true
+exchange_configs:
+  - exchange: kraken
+    public_key: jhbjhg
+    secret_key: ugjh
+    deposit_addresses:
+      'BTC': adfadfadf
+      'ETH': adfadasdfsfa
+      'SOL': adffaadfad
+      'DOT': adsfadsf
+      'ADA': adsfasf
+      'XYZ': adsfadsf
+      'EOS': adsfadfasa
+      'ATOM': adsfadsf
+      'XLM': adfasdadf
+    fake_balances:
+      'BTC': 100.0
+      'ETH': 100.0
+      'LINK': 100.0
+      'SOL': 100.0
+      'DOT': 100.0
+      'ADA': 100.0
+      'XYZ': 100.0
+      'ATOM': 100.0
+      'EOS': 100.0
+      'XLM': 100.0
+strategies:
+  - strategy: PullMarketData
+    spec:
+      name: PullMarketDataTest
+      interval: 5
+    markets:
+      - market:  DOT-USDT
+        bindings:
+        - exchange: kraken
+          market_name: 	DOTUSDT
+      - market: LINK-USDT
+        bindings:
+        - exchange: kraken
+          market_name: LINKUSDT
+      - market: EOS-USDT
+        bindings:
+        - exchange: kraken
+          market_name: EOSUSDT
+  - strategy: RebalancerStrategy
+    spec:
+      name: MyFirstRebalancer
+      interval: 60
+      allowance_threshold: 0.15
+      market_cap_multiplier: 1.25
+      static_coin: USDT
+      portfolio_ratio_percent: 
+        'DOT':  40.0
+        'LINK': 40.0
+        'EOS': 10.0
+        'USDT': 10.0
+    markets:
+      - market:  DOT-USDT
+        bindings:
+        - exchange: kraken
+          market_name: 	DOTUSDT
+      - market: LINK-USDT
+        bindings:
+        - exchange: kraken
+          market_name: LINKUSDT
+      - market: EOS-USDT
+        bindings:
+        - exchange: kraken
+          market_name: EOSUSDT

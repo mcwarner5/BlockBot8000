@@ -13,12 +13,5 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-package main
-
-import (
-	bot "github.com/mcwarner5/BlockBot8000/cmd"
-)
-
-func main() {
-	bot.Execute()
-}
+// Package strategies contains all strategies which can be used by the bot. They may use one or more algorithms.
+package intervalstrategies

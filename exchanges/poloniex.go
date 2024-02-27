@@ -22,8 +22,8 @@ import (
 
 	"github.com/shopspring/decimal"
 
+	"github.com/mcwarner5/BlockBot8000/environment"
 	"github.com/pharrisee/poloniex-api"
-	"github.com/saniales/golang-crypto-trading-bot/environment"
 )
 
 // PoloniexWrapper provides a Generic wrapper of the Poloniex API.
@@ -102,7 +102,7 @@ func (wrapper *PoloniexWrapper) GetCandles(market *environment.Market) ([]enviro
 
 	ret, candleLoaded := wrapper.candles.Get(market)
 	if !candleLoaded {
-		return nil, errors.New("No candle data yet")
+		return nil, errors.New("no candle data yet")
 	}
 
 	return ret, nil
@@ -162,7 +162,7 @@ func (wrapper *PoloniexWrapper) GetTicker(market *environment.Market) (*environm
 	}
 	ticker, exists := poloniexTicker[MarketNameFor(market, wrapper)]
 	if !exists {
-		return nil, errors.New("Market not found")
+		return nil, errors.New("market not found")
 	}
 
 	return &environment.Ticker{
@@ -195,7 +195,7 @@ func (wrapper *PoloniexWrapper) GetMarketSummary(market *environment.Market) (*e
 
 	ret, exists := wrapper.summaries.Get(market)
 	if !exists {
-		return nil, errors.New("Market not found")
+		return nil, errors.New("market not found")
 	}
 
 	return ret, nil
@@ -215,7 +215,7 @@ func (wrapper *PoloniexWrapper) GetBalance(symbol string) (*decimal.Decimal, err
 		}
 	}
 
-	return nil, errors.New("Symbol not found")
+	return nil, errors.New("symbol not found")
 }
 
 // GetDepositAddress gets the deposit address for the specified coin on the exchange.
@@ -226,7 +226,7 @@ func (wrapper *PoloniexWrapper) GetDepositAddress(coinTicker string) (string, bo
 
 // CalculateTradingFees calculates the trading fees for an order on a specified market.
 //
-//     NOTE: In Binance fees are currently hardcoded.
+//	NOTE: In Binance fees are currently hardcoded.
 func (wrapper *PoloniexWrapper) CalculateTradingFees(market *environment.Market, amount float64, limit float64, orderType TradeType) float64 {
 	// NOTE: possibility to use wrapper FeesInfo function.
 	var feePercentage float64

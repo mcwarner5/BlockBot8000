@@ -5,7 +5,7 @@ import (
 
 	"github.com/gofrs/uuid"
 	"github.com/juju/errors"
-	"github.com/saniales/golang-crypto-trading-bot/environment"
+	"github.com/mcwarner5/BlockBot8000/environment"
 	"github.com/shopspring/decimal"
 )
 
@@ -55,7 +55,7 @@ func (wrapper *ExchangeWrapperSimulator) BuyLimit(market *environment.Market, am
 
 // SellLimit here is just to implement the ExchangeWrapper Interface, do not use, use SellMarket instead.
 func (wrapper *ExchangeWrapperSimulator) SellLimit(market *environment.Market, amount float64, limit float64) (string, error) {
-	return "", errors.New("SellLimit operation is not mockable")
+	return "", errors.New("sellLimit operation is not mockable")
 }
 
 // BuyMarket performs a FAKE market buy action.
@@ -176,7 +176,7 @@ func (wrapper *ExchangeWrapperSimulator) Withdraw(destinationAddress string, coi
 	bal, exists := wrapper.balances[coinTicker]
 	amt := decimal.NewFromFloat(amount)
 	if !exists || amt.GreaterThan(bal) {
-		return errors.New("Not enough balance")
+		return errors.New("not enough balance")
 	}
 
 	wrapper.balances[coinTicker] = bal.Sub(amt)

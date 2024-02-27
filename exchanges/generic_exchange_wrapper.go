@@ -18,7 +18,7 @@ package exchanges
 import (
 	"errors"
 
-	"github.com/saniales/golang-crypto-trading-bot/environment"
+	"github.com/mcwarner5/BlockBot8000/environment"
 	"github.com/shopspring/decimal"
 )
 

@@ -13,20 +13,21 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-package strategies
+package intervalstrategies
 
 import (
 	"fmt"
 	"reflect"
 	"time"
 
-	"github.com/saniales/golang-crypto-trading-bot/environment"
-	"github.com/saniales/golang-crypto-trading-bot/exchanges"
+	"github.com/mcwarner5/BlockBot8000/environment"
+	"github.com/mcwarner5/BlockBot8000/exchanges"
+	"github.com/mcwarner5/BlockBot8000/strategies"
 )
 
 // IntervalStrategy is an interval based strategy.
 type IntervalStrategy struct {
-	StrategyModel
+	strategies.StrategyModel
 	Interval int
 }
 
@@ -46,7 +47,7 @@ func NewIntervalStrategy(raw_strat environment.StrategyConfig) *IntervalStrategy
 	//TODO validation
 
 	return &IntervalStrategy{
-		StrategyModel: *NewBaseStrategy(raw_strat),
+		StrategyModel: *strategies.NewBaseStrategy(raw_strat),
 		Interval:      raw_strat.Spec["interval"].(int),
 	}
 }

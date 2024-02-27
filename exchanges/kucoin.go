@@ -22,7 +22,7 @@ import (
 
 	"github.com/fiore/kucoin-go"
 	"github.com/fiore/kucoin-go/websocket"
-	"github.com/saniales/golang-crypto-trading-bot/environment"
+	"github.com/mcwarner5/BlockBot8000/environment"
 	"github.com/shopspring/decimal"
 )
 
@@ -111,7 +111,7 @@ func (wrapper *KucoinWrapper) GetOrderBook(market *environment.Market) (*environ
 	}
 
 	if !exists {
-		return nil, errors.New("Orderbook not loaded")
+		return nil, errors.New("orderbook not loaded")
 	}
 
 	return ret, nil
@@ -197,7 +197,7 @@ func (wrapper *KucoinWrapper) GetMarketSummary(market *environment.Market) (*env
 	}
 
 	if !exists {
-		return nil, errors.New("Summary not loaded")
+		return nil, errors.New("summary not loaded")
 	}
 
 	return ret, nil
@@ -208,7 +208,7 @@ func (wrapper *KucoinWrapper) GetBalance(symbol string) (*decimal.Decimal, error
 	kucoinBalance, err := wrapper.api.GetCoinBalance(symbol)
 
 	if err != nil {
-		return nil, errors.New("Symbol not found")
+		return nil, errors.New("symbol not found")
 	}
 
 	ret := decimal.NewFromFloat(kucoinBalance.Balance)

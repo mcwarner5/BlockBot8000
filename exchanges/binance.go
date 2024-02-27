@@ -21,7 +21,7 @@ import (
 	"fmt"
 
 	"github.com/adshao/go-binance/v2"
-	"github.com/saniales/golang-crypto-trading-bot/environment"
+	"github.com/mcwarner5/BlockBot8000/environment"
 	"github.com/shopspring/decimal"
 	"github.com/sirupsen/logrus"
 )
@@ -93,7 +93,7 @@ func (wrapper *BinanceWrapper) GetOrderBook(market *environment.Market) (*enviro
 
 	orderbook, exists := wrapper.orderbook.Get(market)
 	if !exists {
-		return nil, errors.New("Orderbook not loaded")
+		return nil, errors.New("orderbook not loaded")
 	}
 
 	return orderbook, nil
@@ -224,7 +224,7 @@ func (wrapper *BinanceWrapper) GetMarketSummary(market *environment.Market) (*en
 
 	ret, summaryLoaded := wrapper.summaries.Get(market)
 	if !summaryLoaded {
-		return nil, errors.New("Summary not loaded")
+		return nil, errors.New("summary not loaded")
 	}
 
 	return ret, nil
@@ -261,7 +261,7 @@ func (wrapper *BinanceWrapper) GetCandles(market *environment.Market) ([]environ
 
 	ret, candleLoaded := wrapper.candles.Get(market)
 	if !candleLoaded {
-		return nil, errors.New("No candle data yet")
+		return nil, errors.New("no candle data yet")
 	}
 
 	return ret, nil
@@ -284,7 +284,7 @@ func (wrapper *BinanceWrapper) GetBalance(symbol string) (*decimal.Decimal, erro
 		}
 	}
 
-	return nil, errors.New("Symbol not found")
+	return nil, errors.New("symbol not found")
 }
 
 // GetDepositAddress gets the deposit address for the specified coin on the exchange.
@@ -295,7 +295,7 @@ func (wrapper *BinanceWrapper) GetDepositAddress(coinTicker string) (string, boo
 
 // CalculateTradingFees calculates the trading fees for an order on a specified market.
 //
-//     NOTE: In Binance fees are currently hardcoded.
+//	NOTE: In Binance fees are currently hardcoded.
 func (wrapper *BinanceWrapper) CalculateTradingFees(market *environment.Market, amount float64, limit float64, orderType TradeType) float64 {
 	var feePercentage float64
 	if orderType == MakerTrade {

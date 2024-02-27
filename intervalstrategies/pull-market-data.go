@@ -13,20 +13,20 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-package examples
+package intervalstrategies
 
 import (
 	"fmt"
 
-	"github.com/saniales/golang-crypto-trading-bot/environment"
-	"github.com/saniales/golang-crypto-trading-bot/exchanges"
-	"github.com/saniales/golang-crypto-trading-bot/strategies"
+	"github.com/mcwarner5/BlockBot8000/environment"
+	"github.com/mcwarner5/BlockBot8000/exchanges"
+	"github.com/mcwarner5/BlockBot8000/strategies"
 
 	"github.com/sirupsen/logrus"
 )
 
 type PullMarketData struct {
-	strategies.IntervalStrategy
+	IntervalStrategy
 	CandlesEnabled bool
 }
 
@@ -35,7 +35,7 @@ func NewPullMarketData(raw_strat environment.StrategyConfig) strategies.Strategy
 	//return strategies.NewIntervalStrategy(raw_strat)
 
 	return &PullMarketData{
-		IntervalStrategy: *strategies.NewIntervalStrategy(raw_strat),
+		IntervalStrategy: *NewIntervalStrategy(raw_strat),
 		CandlesEnabled:   false,
 	}
 }
