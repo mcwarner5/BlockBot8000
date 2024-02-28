@@ -105,7 +105,7 @@ func (wrapper *ExchangeWrapperSimulator) SellMarket(market *environment.Market, 
 
 	orderbook, err := wrapper.GetOrderBook(market)
 	if err != nil {
-		return "", errors.Annotate(err, "Cannot market buy without orderbook knowledge")
+		return "", errors.Annotate(err, "cannot market buy without orderbook knowledge")
 	}
 
 	totalQuote := decimal.Zero
@@ -113,7 +113,7 @@ func (wrapper *ExchangeWrapperSimulator) SellMarket(market *environment.Market, 
 	gain := decimal.Zero
 
 	if quoteBalance.LessThan(remainingAmount) {
-		return "", fmt.Errorf("Cannot Sell: not enough %s balance", market.MarketCurrency)
+		return "", fmt.Errorf("cannot Sell: not enough %s balance", market.MarketCurrency)
 	}
 
 	for _, bid := range orderbook.Bids {

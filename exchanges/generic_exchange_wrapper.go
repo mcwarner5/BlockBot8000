@@ -58,7 +58,7 @@ type ExchangeWrapper interface {
 }
 
 // ErrWebsocketNotSupported is the error representing when an exchange does not support websocket.
-var ErrWebsocketNotSupported = errors.New("Cannot use websocket: exchange does not support it")
+var ErrWebsocketNotSupported = errors.New("cannot use websocket: exchange does not support it")
 
 // MarketNameFor gets the market name as seen by the exchange.
 func MarketNameFor(m *environment.Market, wrapper ExchangeWrapper) string {

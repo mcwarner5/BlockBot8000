@@ -22,7 +22,6 @@ import (
 	"github.com/shopspring/decimal"
 
 	"github.com/toorop/go-bittrex"
-	api "github.com/toorop/go-bittrex"
 )
 
 //package github.com/toorop/go-bittrex
@@ -30,7 +29,7 @@ import (
 
 // BittrexWrapper provides a Generic wrapper of the Bittrex API.
 type BittrexWrapper struct {
-	api                 *api.Bittrex //Represents the helper of the Bittrex API.
+	api                 *bittrex.Bittrex //Represents the helper of the Bittrex API.
 	summaries           *SummaryCache
 	candles             *CandlesCache
 	websocketOn         bool
@@ -41,7 +40,7 @@ type BittrexWrapper struct {
 // NewBittrexWrapper creates a generic wrapper of the bittrex API.
 func NewBittrexWrapper(publicKey string, secretKey string, depositAddresses map[string]string) ExchangeWrapper {
 	return &BittrexWrapper{
-		api:              api.New(publicKey, secretKey),
+		api:              bittrex.New(publicKey, secretKey),
 		websocketOn:      false,
 		summaries:        NewSummaryCache(),
 		candles:          NewCandlesCache(),
@@ -183,7 +182,7 @@ func (wrapper *BittrexWrapper) GetMarketSummary(market *environment.Market) (*en
 }
 
 // convertFromBittrexCandle converts a bittrex candle to a environment.CandleStick.
-func convertFromBittrexCandle(candle api.Candle) environment.CandleStick {
+func convertFromBittrexCandle(candle bittrex.Candle) environment.CandleStick {
 	return environment.CandleStick{
 		High:  candle.High,
 		Open:  candle.Open,

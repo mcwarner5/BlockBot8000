@@ -197,9 +197,9 @@ func (wrapper *KrakenWrapper) GetMarketSummary(market *environment.Market) (*env
 // GetCandles gets the candle data from the exchange.
 func (wrapper *KrakenWrapper) GetCandles(market *environment.Market) ([]environment.CandleStick, error) {
 	if !wrapper.websocketOn {
-		//now := time.Now()
+		now := time.Now()
 		//krakenTrades, err := wrapper.api.Trades(MarketNameFor(market, wrapper), now.Add(-time.Hour*24).Unix())
-		krakenCandles, err := wrapper.api.OHLCWithInterval(MarketNameFor(market, wrapper), "1") //, now.Add(-time.Hour*24).Unix())
+		krakenCandles, err := wrapper.api.OHLCWithInterval(MarketNameFor(market, wrapper), "1", now.Add(-time.Hour*24).Unix())
 
 		if err != nil {
 			return nil, err
