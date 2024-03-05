@@ -46,16 +46,16 @@ type BaseSpecModel struct {
 
 // StrategyConfig contains where a strategy will be applied in the specified exchange.
 type IntervalStrategySpecModel struct {
-	BaseSpecModel `mapstructure:",squash"`
 	Interval      int `mapstructure:"interval"` // Represents the interval on which to run the strategy.
+	BaseSpecModel `mapstructure:",squash"`
 }
 
 type ThresholdRebalancerSpecModel struct {
+	AllowanceThreshold        decimal.Decimal            `mapstructure:"allowance_threshold"`
+	MarketCapMultiplier       decimal.Decimal            `mapstructure:"market_cap_multiplier"`
+	StaticCoin                string                     `mapstructure:"static_coin"`
+	PortfolioRatioPercent     map[string]decimal.Decimal `mapstructure:"portfolio_ratio_percent"`
 	IntervalStrategySpecModel `mapstructure:",squash"`
-	AllowanceThreshold        decimal.Decimal `mapstructure:"allowance_threshold"`
-	MarketCapMultiplier       decimal.Decimal `mapstructure:"market_cap_multiplier"`
-	StaticCoin                string          `mapstructure:"static_coin"`
-	Portfolio                 map[string]int  `mapstructure:"portfolio_ratio_percent"`
 }
 
 // MarketConfig contains all market configuration data.

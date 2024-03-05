@@ -1,69 +1,141 @@
 simulation_mode: true
 exchange_configs:
   - exchange: kraken
-    public_key: jhbjhg
-    secret_key: ugjh
+    public_key: 
+    secret_key: 
     deposit_addresses:
-      'BTC': adfadfadf
-      'ETH': adfadasdfsfa
-      'SOL': adffaadfad
-      'DOT': adsfadsf
-      'ADA': adsfasf
-      'XYZ': adsfadsf
-      'EOS': adsfadfasa
-      'ATOM': adsfadsf
-      'XLM': adfasdadf
+      'BTC': BTC_wallet
+      'ETH': ETH_wallet
+      'SOL': SOL_wallet
+      'DOT': DOT_wallet
+      'ADA': ADA_wallet
+      'XYZ': XYZ_wallet
+      'EOS': EOS_wallet
+      'ATOM': ATOM_wallet
+      'XLM': XLM_wallet
     fake_balances:
-      'BTC': 100.0
-      'ETH': 100.0
-      'LINK': 100.0
-      'SOL': 100.0
-      'DOT': 100.0
-      'ADA': 100.0
-      'XYZ': 100.0
-      'ATOM': 100.0
-      'EOS': 100.0
-      'XLM': 100.0
+      btc: 0.2
+      eth: 3.5
+      link: 420.0
+      avax: 100.0
+      sol: 65.0
+      dot: 850.0
+      ada: 11200.0
+      matic: 7500.0
+      algo: 17000.0
+      atom: 350.0
+      usdt: 4500.0
 strategies:
   - strategy: PullMarketData
     spec:
       name: PullMarketDataTest
-      interval: 5
+      interval: 1
     markets:
-      - market:  DOT-USDT
+      - market:  btc-usdt
+        bindings:
+        - exchange: kraken
+          market_name: 	XBTUSDT
+      - market: eth-usdt
+        bindings:
+        - exchange: kraken
+          market_name: ETHUSDT
+      - market: sol-usdt
+        bindings:
+        - exchange: kraken
+          market_name: SOLUSDT
+      - market: ada-usdt
+        bindings:
+        - exchange: kraken
+          market_name: ADAUSDT
+      - market:  dot-usdt
         bindings:
         - exchange: kraken
           market_name: 	DOTUSDT
-      - market: LINK-USDT
+      - market: link-usdt
         bindings:
         - exchange: kraken
           market_name: LINKUSDT
-      - market: EOS-USDT
+      - market: matic-usdt
         bindings:
         - exchange: kraken
-          market_name: EOSUSDT
+          market_name: MATICUSDT
+      - market:  avax-usdt
+        bindings:
+        - exchange: kraken
+          market_name: 	AVAXUSDT
+      - market: algo-usdt
+        bindings:
+        - exchange: kraken
+          market_name: ALGOUSDT
+      - market: atom-usdt
+        bindings:
+        - exchange: kraken
+          market_name: ATOMUSDT
+      - market: usdt-usd
+        bindings:
+        - exchange: kraken
+          market_name: USDTZUSD
   - strategy: RebalancerStrategy
     spec:
       name: MyFirstRebalancer
-      interval: 60
+      interval: 15
       allowance_threshold: 0.15
       market_cap_multiplier: 1.25
-      static_coin: USDT
+      static_coin: usdt
       portfolio_ratio_percent: 
-        'DOT':  40.0
-        'LINK': 40.0
-        'EOS': 10.0
-        'USDT': 10.0
+        btc: 0.15
+        eth: 0.15
+        sol: 0.10
+        ada: 0.10
+        dot: 0.10
+        link: 0.10
+        matic: 0.10
+        avax: 0.05
+        algo: 0.05
+        atom: 0.05
+        usdt: 0.05
     markets:
-      - market:  DOT-USDT
+      - market:  btc-usdt
+        bindings:
+        - exchange: kraken
+          market_name: 	XBTUSDT
+      - market: eth-usdt
+        bindings:
+        - exchange: kraken
+          market_name: ETHUSDT
+      - market: sol-usdt
+        bindings:
+        - exchange: kraken
+          market_name: SOLUSDT
+      - market: ada-usdt
+        bindings:
+        - exchange: kraken
+          market_name: ADAUSDT
+      - market:  dot-usdt
         bindings:
         - exchange: kraken
           market_name: 	DOTUSDT
-      - market: LINK-USDT
+      - market: link-usdt
         bindings:
         - exchange: kraken
           market_name: LINKUSDT
-      - market: EOS-USDT
+      - market: matic-usdt
         bindings:
         - exchange: kraken
-          market_name: EOSUSDT
+          market_name: MATICUSDT
+      - market:  avax-usdt
+        bindings:
+        - exchange: kraken
+          market_name: 	AVAXUSDT
+      - market: algo-usdt
+        bindings:
+        - exchange: kraken
+          market_name: ALGOUSDT
+      - market: atom-usdt
+        bindings:
+        - exchange: kraken
+          market_name: ATOMUSDT
+      - market: usdt-usd
+        bindings:
+        - exchange: kraken
+          market_name: USDTZUSD

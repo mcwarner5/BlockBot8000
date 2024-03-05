@@ -32,7 +32,7 @@ type Strategy interface {
 	//CreateFromSpec(environment.BaseStrategyConfig) Strategy
 	GetName() string // Name returns the name of the strategy.
 	//Apply([]exchanges.ExchangeWrapper, []*environment.Market) // Apply applies the strategy when called, using the specified wrapper.
-	Setup([]exchanges.ExchangeWrapper, []*environment.Market) error
+	Setup([]exchanges.ExchangeWrapper, []*environment.Market) (Strategy, error)
 	TearDown([]exchanges.ExchangeWrapper, []*environment.Market) error
 	OnUpdate([]exchanges.ExchangeWrapper, []*environment.Market) error
 	OnError(error)
@@ -61,9 +61,9 @@ func (is StrategyModel) String() string {
 
 // Apply executes Cyclically the On Update, basing on provided interval.
 
-func (is StrategyModel) Setup(wrappers []exchanges.ExchangeWrapper, markets []*environment.Market) error {
+func (is StrategyModel) Setup(wrappers []exchanges.ExchangeWrapper, markets []*environment.Market) (Strategy, error) {
 	fmt.Println("Base Setup")
-	return nil
+	return is, nil
 }
 
 func (is StrategyModel) OnUpdate(wrappers []exchanges.ExchangeWrapper, markets []*environment.Market) error {
@@ -117,7 +117,7 @@ func MatchWithMarkets(strategyName string, markets []*environment.Market) error 
 func Apply(wrappers []exchanges.ExchangeWrapper, strategy Strategy, markets []*environment.Market) {
 	var err error
 
-	err = strategy.Setup(wrappers, markets)
+	strategy, err = strategy.Setup(wrappers, markets)
 	if err != nil {
 		strategy.OnError(err)
 	}

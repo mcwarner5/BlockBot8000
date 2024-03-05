@@ -73,6 +73,7 @@ func initConfigs() error {
 
 	viper.SetConfigType("yaml")
 	viper.SetConfigFile(GlobalFlags.ConfigFile)
+	viper.AutomaticEnv()
 	err := viper.ReadInConfig()
 
 	if err != nil {

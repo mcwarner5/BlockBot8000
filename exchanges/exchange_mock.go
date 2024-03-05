@@ -76,20 +76,22 @@ func (wrapper *ExchangeWrapperSimulator) BuyMarket(market *environment.Market, a
 		if remainingAmount.LessThanOrEqual(ask.Quantity) {
 			totalQuote = totalQuote.Add(remainingAmount)
 			expense = expense.Add(remainingAmount.Mul(ask.Value))
-			if expense.GreaterThan(*baseBalance) {
+			if expense.GreaterThan(*quoteBalance) {
 				return "", fmt.Errorf("cannot Buy not enough %s balance", market.BaseCurrency)
 			}
 			break
 		}
 		totalQuote = totalQuote.Add(ask.Quantity)
+		remainingAmount = remainingAmount.Sub(ask.Quantity)
+
 		expense = expense.Add(ask.Quantity.Mul(ask.Value))
-		if expense.GreaterThan(*baseBalance) {
+		if expense.GreaterThan(*quoteBalance) {
 			return "", fmt.Errorf("cannot Buy not enough %s balance", market.BaseCurrency)
 		}
 	}
 
-	wrapper.balances[market.BaseCurrency] = baseBalance.Sub(expense)
-	wrapper.balances[market.MarketCurrency] = quoteBalance.Add(totalQuote)
+	wrapper.balances[market.BaseCurrency] = baseBalance.Add(totalQuote)
+	wrapper.balances[market.MarketCurrency] = quoteBalance.Sub(expense)
 
 	orderFakeID, err := uuid.NewV4()
 	if err != nil {
@@ -112,7 +114,7 @@ func (wrapper *ExchangeWrapperSimulator) SellMarket(market *environment.Market, 
 	remainingAmount := decimal.NewFromFloat(amount)
 	gain := decimal.Zero
 
-	if quoteBalance.LessThan(remainingAmount) {
+	if baseBalance.LessThan(remainingAmount) {
 		return "", fmt.Errorf("cannot Sell: not enough %s balance", market.MarketCurrency)
 	}
 
@@ -123,11 +125,12 @@ func (wrapper *ExchangeWrapperSimulator) SellMarket(market *environment.Market, 
 			break
 		}
 		totalQuote = totalQuote.Add(bid.Quantity)
+		remainingAmount = remainingAmount.Sub(bid.Quantity)
 		gain = gain.Add(bid.Quantity.Mul(bid.Value))
 	}
 
-	wrapper.balances[market.BaseCurrency] = baseBalance.Add(gain)
-	wrapper.balances[market.MarketCurrency] = quoteBalance.Sub(totalQuote)
+	wrapper.balances[market.BaseCurrency] = baseBalance.Sub(totalQuote)
+	wrapper.balances[market.MarketCurrency] = quoteBalance.Add(gain)
 
 	orderFakeID, err := uuid.NewV4()
 	if err != nil {

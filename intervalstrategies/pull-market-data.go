@@ -21,8 +21,6 @@ import (
 	"github.com/mcwarner5/BlockBot8000/environment"
 	"github.com/mcwarner5/BlockBot8000/exchanges"
 	"github.com/mcwarner5/BlockBot8000/strategies"
-
-	"github.com/sirupsen/logrus"
 )
 
 type PullMarketData struct {
@@ -40,9 +38,9 @@ func NewPullMarketData(raw_strat environment.StrategyConfig) strategies.Strategy
 	}
 }
 
-func (is PullMarketData) Setup(wrappers []exchanges.ExchangeWrapper, markets []*environment.Market) error {
+func (is PullMarketData) Setup(wrappers []exchanges.ExchangeWrapper, markets []*environment.Market) (strategies.Strategy, error) {
 	fmt.Println("PullMarketData starting")
-	return nil
+	return is, nil
 }
 
 func (is PullMarketData) OnUpdate(wrappers []exchanges.ExchangeWrapper, markets []*environment.Market) error {
@@ -64,12 +62,6 @@ func (is PullMarketData) OnUpdate(wrappers []exchanges.ExchangeWrapper, markets 
 		//candles_info = append(candles_info, *candles)
 	}
 
-	for i, market := range markets {
-		logrus.Info(market)
-		logrus.Info(markets_info[i])
-	}
-
-	logrus.Info(wrappers)
 	is.IntervalStrategy.OnUpdate(wrappers, markets)
 	return nil
 }

@@ -22,15 +22,15 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-//Ticker provides data incoming from API Tickers, which have little amount of information
-//regarding very last updates from a market.
+// Ticker provides data incoming from API Tickers, which have little amount of information
+// regarding very last updates from a market.
 type Ticker struct {
 	Ask  decimal.Decimal `json:"Ask"`  //Represents ASK value from the ticker.
 	Bid  decimal.Decimal `json:"Bid"`  //Represents BID value from the ticker.
 	Last decimal.Decimal `json:"Last"` //Represents LAST trade value from the ticker.
 }
 
-//Market represents the environment the bot is trading in.
+// Market represents the environment the bot is trading in.
 type Market struct {
 	Name           string            `json:"name,required"`            //Represents the name of the market as defined in general (e.g. ETH-BTC).
 	BaseCurrency   string            `json:"baseCurrency,omitempty"`   //Represents the base currency of the market.
@@ -43,7 +43,7 @@ func (m Market) String() string {
 	return strings.TrimSpace(ret)
 }
 
-//MarketSummary represents the summary data of a market.
+// MarketSummary represents the summary data of a market.
 type MarketSummary struct {
 	High   decimal.Decimal `json:"high,required"`   //Represents the 24 hours maximum peak of this market.
 	Low    decimal.Decimal `json:"low,required"`    //Represents the 24 hours minimum peak of this market.
@@ -55,14 +55,14 @@ type MarketSummary struct {
 
 func (ms MarketSummary) String() string {
 	return fmt.Sprintln("  Last: ", ms.Last) +
-		fmt.Sprintln("  ASK: ", ms.Ask) +
-		fmt.Sprintln("  BID: ", ms.Bid) +
+		fmt.Sprintln("  Ask: ", ms.Ask) +
+		fmt.Sprintln("  Bid: ", ms.Bid) +
 		fmt.Sprintln("  Volume: ", ms.Volume) +
 		fmt.Sprintln("  High: ", ms.High) +
 		fmt.Sprintln("  Low: ", ms.Low)
 }
 
-//UpdateFromTicker updates the values of the market summary from a Ticker Data.
+// UpdateFromTicker updates the values of the market summary from a Ticker Data.
 func (ms *MarketSummary) UpdateFromTicker(ticker Ticker) {
 	ms.Ask = ticker.Ask
 	ms.Bid = ticker.Bid
