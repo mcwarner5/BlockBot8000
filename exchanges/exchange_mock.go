@@ -2,11 +2,14 @@ package exchanges
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/gofrs/uuid"
 	"github.com/juju/errors"
 	"github.com/mcwarner5/BlockBot8000/environment"
+	client "github.com/mcwarner5/BlockBot8000/libraries/coinbase-adv"
 	"github.com/shopspring/decimal"
+	"github.com/sirupsen/logrus"
 )
 
 // ExchangeWrapperSimulator wraps another wrapper and returns simulated balances and orders.
@@ -40,6 +43,29 @@ func (wrapper *ExchangeWrapperSimulator) GetCandles(market *environment.Market) 
 
 // GetMarketSummary gets the current market summary.
 func (wrapper *ExchangeWrapperSimulator) GetMarketSummary(market *environment.Market) (*environment.MarketSummary, error) {
+
+	//devToken := os.Getenv("CB-ACTOKEN")
+	//creds := client.Credentials{AccessToken: devToken}
+
+	creds := client.Credentials{
+		ApiKey:      os.Getenv("CB-APIKEY"),
+		ApiSKey:     os.Getenv("CB-SKEY"),
+		AccessToken: os.Getenv("CB-ACTOKEN"),
+	}
+
+	cln := client.NewClient(&creds)
+
+	limit := int32(1)
+	p := client.ListAccountsParams{
+		Limit: &limit,
+	}
+
+	rsp, err := cln.ListAccounts(&p)
+	if err != nil {
+		fmt.Println(err)
+		return err
+	}
+	logrus.Info(rsp.String())
 	return wrapper.innerWrapper.GetMarketSummary(market)
 }
 
