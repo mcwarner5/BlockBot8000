@@ -24,7 +24,7 @@ require (
 )
 
 require (
-	github.com/QuantFu-Inc/coinbase-adv v0.2.3-beta // indirect
+	github.com/mcwarner5/BlockBot8000/libraries/coinbase-adv v0.2.3-beta // indirect
 	github.com/andybalholm/brotli v1.1.0 // indirect
 	github.com/bitly/go-simplejson v0.5.1 // indirect
 	github.com/chuckpreslar/emission v0.0.0-20170206194824-a7ddd980baf9 // indirect

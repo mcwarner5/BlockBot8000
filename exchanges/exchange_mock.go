@@ -2,14 +2,12 @@ package exchanges
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/gofrs/uuid"
 	"github.com/juju/errors"
 	"github.com/mcwarner5/BlockBot8000/environment"
-	client "github.com/mcwarner5/BlockBot8000/libraries/coinbase-adv"
+
 	"github.com/shopspring/decimal"
-	"github.com/sirupsen/logrus"
 )
 
 // ExchangeWrapperSimulator wraps another wrapper and returns simulated balances and orders.
@@ -47,7 +45,7 @@ func (wrapper *ExchangeWrapperSimulator) GetMarketSummary(market *environment.Ma
 	//devToken := os.Getenv("CB-ACTOKEN")
 	//creds := client.Credentials{AccessToken: devToken}
 
-	creds := client.Credentials{
+	/*creds := client.Credentials{
 		ApiKey:      os.Getenv("CB-APIKEY"),
 		ApiSKey:     os.Getenv("CB-SKEY"),
 		AccessToken: os.Getenv("CB-ACTOKEN"),
@@ -66,6 +64,8 @@ func (wrapper *ExchangeWrapperSimulator) GetMarketSummary(market *environment.Ma
 		return err
 	}
 	logrus.Info(rsp.String())
+	*/
+
 	return wrapper.innerWrapper.GetMarketSummary(market)
 }
 
