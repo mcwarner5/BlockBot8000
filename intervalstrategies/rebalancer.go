@@ -142,7 +142,7 @@ func (is RebalancerStrategy) Setup(wrappers []exchanges.ExchangeWrapper, markets
 
 	coin_balance_info := make(map[string]*CoinBalance)
 	for _, market := range markets {
-		coin := market.Name
+		coin := market.BaseCurrency
 		balance, err := wrappers[0].GetBalance(market.BaseCurrency)
 		if err != nil {
 			return is, err
@@ -157,7 +157,7 @@ func (is RebalancerStrategy) Setup(wrappers []exchanges.ExchangeWrapper, markets
 	}
 	is.InitialBalances = &PortfolioBalance{Balances: coin_balance_info}
 
-	//logrus.Info(is.InitialBalances.String())
+	logrus.Info(is.InitialBalances.String())
 	return is, nil
 }
 
@@ -248,8 +248,8 @@ func (is RebalancerStrategy) RebalanceSells(wrappers []exchanges.ExchangeWrapper
 			return is, err
 		}
 
-		percent_str := sell_percent.Mul(decimal.NewFromInt(100)).Round(3).String()
-		sell_logs = sell_logs + fmt.Sprintln("sell | "+percent_str+ternary.If(len(percent_str) > 5, "\t", "\t\t")+"| "+portfolio_coin)
+		percent_str := sell_percent.Mul(decimal.NewFromInt(100)).Round(5).String()
+		sell_logs = sell_logs + fmt.Sprintln("sell | "+percent_str+"\t| "+portfolio_coin)
 	}
 
 	is, err := is.UpdateCurrentBalances(wrappers, markets)

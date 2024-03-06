@@ -45,15 +45,15 @@ func (is PullMarketData) Setup(wrappers []exchanges.ExchangeWrapper, markets []*
 
 func (is PullMarketData) OnUpdate(wrappers []exchanges.ExchangeWrapper, markets []*environment.Market) error {
 
-	markets_info := make([]environment.MarketSummary, 0, len(markets))
+	//markets_info := make([]environment.MarketSummary, 0, len(markets))
 	//candles_info := make([]environment.CandleStickChart, 0, len(markets))
 
 	for _, market := range markets {
-		data, err := wrappers[0].GetMarketSummary(market)
+		_, err := wrappers[0].GetMarketSummary(market)
 		if err != nil {
 			return err
 		}
-		markets_info = append(markets_info, *data)
+		//markets_info = append(markets_info, *data)
 
 		_, err2 := wrappers[0].GetCandles(market)
 		if err2 != nil {
