@@ -16,7 +16,6 @@
 package intervalstrategies
 
 import (
-	"fmt"
 	"reflect"
 	"time"
 
@@ -35,12 +34,15 @@ func (is IntervalStrategy) String() string {
 	return "Type: " + reflect.TypeOf(is).String() + " Name:" + is.GetName()
 }
 
-func (is IntervalStrategy) OnUpdate(wrappers []exchanges.ExchangeWrapper, markets []*environment.Market) error {
-	fmt.Println("OnUpdate " + is.String())
+func (is IntervalStrategy) OnUpdate(wrappers []exchanges.ExchangeWrapper, markets []*environment.Market) (strategies.Strategy, error) {
+	//fmt.Println("OnUpdate " + is.String())
+	if wrappers[0].Name() == "simulator" {
+		return is, nil
+	}
 
 	var sleep_len = time.Duration(is.Interval) * time.Minute
 	time.Sleep(sleep_len)
-	return nil
+	return is, nil
 }
 
 func NewIntervalStrategy(raw_strat environment.StrategyConfig) *IntervalStrategy {

@@ -24,7 +24,7 @@ import (
 )
 
 const (
-	versionNumber = "0.0.1-pre-alpha"
+	versionNumber = "1.0.1"
 )
 
 // RootCmd represents the base command when called without any subcommands

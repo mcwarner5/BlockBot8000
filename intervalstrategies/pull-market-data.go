@@ -43,7 +43,7 @@ func (is PullMarketData) Setup(wrappers []exchanges.ExchangeWrapper, markets []*
 	return is, nil
 }
 
-func (is PullMarketData) OnUpdate(wrappers []exchanges.ExchangeWrapper, markets []*environment.Market) error {
+func (is PullMarketData) OnUpdate(wrappers []exchanges.ExchangeWrapper, markets []*environment.Market) (strategies.Strategy, error) {
 
 	//markets_info := make([]environment.MarketSummary, 0, len(markets))
 	//candles_info := make([]environment.CandleStickChart, 0, len(markets))
@@ -51,26 +51,26 @@ func (is PullMarketData) OnUpdate(wrappers []exchanges.ExchangeWrapper, markets 
 	for _, market := range markets {
 		_, err := wrappers[0].GetMarketSummary(market)
 		if err != nil {
-			return err
+			return is, err
 		}
 		//markets_info = append(markets_info, *data)
 
 		_, err2 := wrappers[0].GetCandles(market)
 		if err2 != nil {
-			return err
+			return is, err
 		}
 		//candles_info = append(candles_info, *candles)
 	}
 
 	is.IntervalStrategy.OnUpdate(wrappers, markets)
-	return nil
+	return is, nil
 }
 
 func (is PullMarketData) OnError(err error) {
 	fmt.Println(err)
 }
 
-func (is PullMarketData) TearDown(wrappers []exchanges.ExchangeWrapper, markets []*environment.Market) error {
+func (is PullMarketData) TearDown(wrappers []exchanges.ExchangeWrapper, markets []*environment.Market) (strategies.Strategy, error) {
 	fmt.Println("Watch1Min exited")
-	return nil
+	return is, nil
 }

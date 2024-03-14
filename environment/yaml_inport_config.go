@@ -27,11 +27,10 @@ type Balance struct {
 //
 //	Can be used to generate an ExchangeWrapper.
 type ExchangeConfig struct {
-	ExchangeName     string                     `mapstructure:"exchange"`          // Represents the exchange name.
-	PublicKey        string                     `mapstructure:"public_key"`        // Represents the public key used to connect to Exchange API.
-	SecretKey        string                     `mapstructure:"secret_key"`        // Represents the secret key used to connect to Exchange API.
-	DepositAddresses map[string]string          `mapstructure:"deposit_addresses"` // Represents the bindings between coins and deposit address on the exchange.
-	FakeBalances     map[string]decimal.Decimal `mapstructure:"fake_balances"`     // Used only in simulation mode, fake starting balance [coin:balance].
+	ExchangeName     string            `mapstructure:"exchange"`          // Represents the exchange name.
+	PublicKey        string            `mapstructure:"public_key"`        // Represents the public key used to connect to Exchange API.
+	SecretKey        string            `mapstructure:"secret_key"`        // Represents the secret key used to connect to Exchange API.
+	DepositAddresses map[string]string `mapstructure:"deposit_addresses"` // Represents the bindings between coins and deposit address on the exchange.
 }
 
 type StrategyConfig struct {
@@ -66,13 +65,24 @@ type MarketConfig struct {
 
 // ExchangeBindingsConfig represents the binding of market names between bot notation and exchange ticker.
 type ExchangeBindingsConfig struct {
-	Name       string `mapstructure:"exchange"`    // Represents the name of the exchange.
-	MarketName string `mapstructure:"market_name"` // Represents the name of the market as seen from the exchange.
+	Name          string `mapstructure:"exchange"`    // Represents the name of the exchange.
+	MarketName    string `mapstructure:"market_name"` // Represents the name of the market as seen from the exchange.
+	SimMarketName string `mapstructure:"sim_market_name"`
+}
+
+type SimulationConfig struct {
+	SimModeOn       bool                       `mapstructure:"enabled"` // if true, do not create real orders and do not get real balance
+	SimStartDate    string                     `mapstructure:"start_date"`
+	SimEndDate      string                     `mapstructure:"end_date"`
+	SimPublicKey    string                     `mapstructure:"public_key"` // Represents the public key used to connect to Exchange API.
+	SimSecretKey    string                     `mapstructure:"secret_key"`
+	SimInterval     int                        `mapstructure:"interval"`
+	SimFakeBalances map[string]decimal.Decimal `mapstructure:"fake_balances"` // Used only in simulation mode, fake starting balance [coin:balance].
 }
 
 // BotConfig contains all config data of the bot, which can be also loaded from config file.
 type BotConfig struct {
-	SimulationModeOn bool             `mapstructure:"simulation_mode"`  // if true, do not create real orders and do not get real balance
-	ExchangeConfigs  []ExchangeConfig `mapstructure:"exchange_configs"` // Represents the current exchange configuration.
-	Strategies       []StrategyConfig `mapstructure:"strategies"`       // Represents the current strategies adopted by the bot.
+	SimulationConfigs SimulationConfig `mapstructure:"simulation_configs"`
+	ExchangeConfigs   []ExchangeConfig `mapstructure:"exchange_configs"` // Represents the current exchange configuration.
+	Strategies        []StrategyConfig `mapstructure:"strategies"`       // Represents the current strategies adopted by the bot.
 }

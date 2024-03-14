@@ -8,7 +8,6 @@ require (
 	github.com/fatih/structs v1.1.0
 	github.com/fiore/kucoin-go v0.0.0-20190107105632-5a814c26befa
 	github.com/gofrs/uuid v4.4.0+incompatible
-	github.com/gorilla/websocket v1.5.1
 	github.com/juju/errors v1.0.0
 	github.com/julien040/go-ternary v0.0.0-20230119180150-f0435f66948e
 	github.com/mitchellh/mapstructure v1.5.0
@@ -24,7 +23,6 @@ require (
 )
 
 require (
-	github.com/mcwarner5/BlockBot8000/libraries/coinbase-adv v0.2.3-beta // indirect
 	github.com/andybalholm/brotli v1.1.0 // indirect
 	github.com/bitly/go-simplejson v0.5.1 // indirect
 	github.com/chuckpreslar/emission v0.0.0-20170206194824-a7ddd980baf9 // indirect
@@ -34,6 +32,7 @@ require (
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
 	github.com/google/go-cmp v0.6.0 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
+	github.com/gorilla/websocket v1.5.1 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/jpillora/backoff v1.0.0 // indirect

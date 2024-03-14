@@ -5,12 +5,11 @@ import (
 	"github.com/mcwarner5/BlockBot8000/exchanges"
 	"github.com/mcwarner5/BlockBot8000/intervalstrategies"
 	"github.com/mcwarner5/BlockBot8000/strategies"
-	"github.com/shopspring/decimal"
 )
 
 // InitExchange initialize a new ExchangeWrapper binded to the specified exchange provided.
-func InitExchange(exchangeConfig environment.ExchangeConfig, simulatedMode bool, fakeBalances map[string]decimal.Decimal, depositAddresses map[string]string) exchanges.ExchangeWrapper {
-	if depositAddresses == nil && !simulatedMode {
+func InitExchange(exchangeConfig environment.ExchangeConfig, simulatedConfigs environment.SimulationConfig, depositAddresses map[string]string) exchanges.ExchangeWrapper {
+	if depositAddresses == nil && !simulatedConfigs.SimModeOn {
 		return nil
 	}
 
@@ -36,11 +35,11 @@ func InitExchange(exchangeConfig environment.ExchangeConfig, simulatedMode bool,
 		return nil
 	}
 
-	if simulatedMode {
-		if fakeBalances == nil {
+	if simulatedConfigs.SimModeOn {
+		if simulatedConfigs.SimFakeBalances == nil {
 			return nil
 		}
-		exch = exchanges.NewExchangeWrapperSimulator(exch, fakeBalances)
+		exch = exchanges.NewExchangeWrapperSimulator(exch, simulatedConfigs)
 	}
 
 	return exch

@@ -33,8 +33,8 @@ type Strategy interface {
 	GetName() string // Name returns the name of the strategy.
 	//Apply([]exchanges.ExchangeWrapper, []*environment.Market) // Apply applies the strategy when called, using the specified wrapper.
 	Setup([]exchanges.ExchangeWrapper, []*environment.Market) (Strategy, error)
-	TearDown([]exchanges.ExchangeWrapper, []*environment.Market) error
-	OnUpdate([]exchanges.ExchangeWrapper, []*environment.Market) error
+	TearDown([]exchanges.ExchangeWrapper, []*environment.Market) (Strategy, error)
+	OnUpdate([]exchanges.ExchangeWrapper, []*environment.Market) (Strategy, error)
 	OnError(error)
 }
 
@@ -54,6 +54,10 @@ func (is StrategyModel) GetName() string {
 	return is.Name
 }
 
+func (is StrategyModel) IsSimulator() bool {
+	return false
+}
+
 // String returns a string representation of the object.
 func (is StrategyModel) String() string {
 	return is.GetName()
@@ -66,8 +70,8 @@ func (is StrategyModel) Setup(wrappers []exchanges.ExchangeWrapper, markets []*e
 	return is, nil
 }
 
-func (is StrategyModel) OnUpdate(wrappers []exchanges.ExchangeWrapper, markets []*environment.Market) error {
-	return errors.New("BaseStrategy OnUpdate not implemented")
+func (is StrategyModel) OnUpdate(wrappers []exchanges.ExchangeWrapper, markets []*environment.Market) (Strategy, error) {
+	return is, errors.New("BaseStrategy OnUpdate not implemented")
 }
 
 func (is StrategyModel) OnError(err error) {
@@ -75,9 +79,9 @@ func (is StrategyModel) OnError(err error) {
 	fmt.Println(err)
 }
 
-func (is StrategyModel) TearDown(wrappers []exchanges.ExchangeWrapper, markets []*environment.Market) error {
+func (is StrategyModel) TearDown(wrappers []exchanges.ExchangeWrapper, markets []*environment.Market) (Strategy, error) {
 	fmt.Println("Base TearDown")
-	return nil
+	return is, nil
 }
 
 // Tactic represents the effective appliance of a strategy.
@@ -123,13 +127,22 @@ func Apply(wrappers []exchanges.ExchangeWrapper, strategy Strategy, markets []*e
 	}
 
 	for err == nil {
-		err = strategy.OnUpdate(wrappers, markets)
+		strategy, err = strategy.OnUpdate(wrappers, markets)
 		if err != nil {
 			strategy.OnError(err)
 		}
+		for _, wrapper := range wrappers {
+			if wrapper.Name() == "simulator" {
+				err = wrapper.(*exchanges.ExchangeWrapperSimulator).IncrementCurrDate()
+				if err != nil {
+					strategy.OnError(err)
+				}
+				break
+			}
+		}
 	}
 
-	err = strategy.TearDown(wrappers, markets)
+	strategy, err = strategy.TearDown(wrappers, markets)
 	if err != nil {
 		strategy.OnError(err)
 	}
