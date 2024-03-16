@@ -3,6 +3,7 @@ package exchanges
 import (
 	"context"
 	"fmt"
+	"sort"
 	"strconv"
 	"time"
 
@@ -75,7 +76,7 @@ func (wrapper *ExchangeWrapperSimulator) Name() string {
 }
 
 func (wrapper *ExchangeWrapperSimulator) IncrementCurrDate() error {
-	logrus.Info("End of Interval:" + wrapper.currDate.String())
+	//logrus.Info("End of Interval:" + wrapper.currDate.String())
 	var interval_len = time.Duration(wrapper.interval) * time.Minute
 	*wrapper.currDate = wrapper.currDate.Add(interval_len)
 
@@ -90,32 +91,51 @@ func (wrapper *ExchangeWrapperSimulator) IncrementCurrDate() error {
 // GetCandles gets the candle data from the exchange.
 func (wrapper *ExchangeWrapperSimulator) UpdateMappedCandles(market *environment.Market, from_time time.Time) (*environment.CandleStick, error) {
 	ctx := context.Background()
-	var one_interval = time.Duration(wrapper.interval) * time.Minute
-	var api_call_len = time.Duration(wrapper.interval*300) * time.Minute
-	var api_end_date = from_time.Add(-one_interval + api_call_len)
-	var from_time_key = fmt.Sprint(from_time.Add(-one_interval).Unix())
+	one_interval := time.Duration(wrapper.interval) * time.Minute
+	api_call_len := time.Duration(wrapper.interval*300) * time.Minute
+	api_end_date := from_time.Add(-one_interval + api_call_len)
+	api_end_date_key := fmt.Sprint(api_end_date.Unix())
+	api_start_date := from_time.Add(-one_interval)
+	api_start_date_key := fmt.Sprint(api_start_date.Unix())
+	//from_time_key := fmt.Sprint(from_time.Unix())
 
 	var params = client.ListProductsCandlesParams{
 		Product:   MarketNameFor(market, wrapper),
-		StartTime: from_time_key,
-		EndTime:   fmt.Sprint(api_end_date.Unix()),
+		StartTime: api_start_date_key,
+		EndTime:   api_end_date_key,
 		Interval:  wrapper.interval,
 	}
 	response, _ := wrapper.coinbase.GetProductCandles(ctx, &params)
 	new_map := NewSizedCandleMap(len(response.CandleSticks))
+	candles := response.GetCandleSticks()
 
-	for _, candle := range response.GetCandleSticks() {
-		u_num, _ := strconv.ParseInt(*candle.Start, 10, 64)
+	sort.Slice(candles, func(i, j int) bool {
+		m_t_u_str, _ := strconv.ParseInt(*candles[i].Start, 10, 64)
+		o_t_u_str, _ := strconv.ParseInt(*candles[j].Start, 10, 64)
+		m_t := time.Unix(m_t_u_str, 0).UTC()
+		o_t := time.Unix(o_t_u_str, 0).UTC()
+		return m_t.Before(o_t)
+	})
 
+	var prev_candle *environment.CandleStick
+	pot_prev_candle, isSet := wrapper.candles.GetTime(market, from_time.Add(-one_interval))
+	if isSet {
+		prev_candle = pot_prev_candle
+	}
+
+	next_fill_time := from_time
+	for i := 0; i < len(candles); i++ {
+		candle := candles[i]
+		c_time_u_num, _ := strconv.ParseInt(*candle.Start, 10, 64)
+		c_time := time.Unix(c_time_u_num, 0).UTC()
+		c_time_key := fmt.Sprint(c_time.Unix())
 		c_high, _ := decimal.NewFromString(*candle.High)
 		c_open, _ := decimal.NewFromString(*candle.Open)
 		c_low, _ := decimal.NewFromString(*candle.Low)
 		c_close, _ := decimal.NewFromString(*candle.Close)
 		c_volume, _ := decimal.NewFromString(*candle.Volume)
-		c_time := time.Unix(u_num, 0)
-		c_time_key := fmt.Sprint(c_time.Unix())
 
-		new_map.TimeMap[c_time_key] = &environment.CandleStick{
+		new_candle := environment.CandleStick{
 			High:       c_high,
 			Open:       c_open,
 			Close:      c_close,
@@ -123,25 +143,39 @@ func (wrapper *ExchangeWrapperSimulator) UpdateMappedCandles(market *environment
 			Volume:     c_volume,
 			CandleTime: c_time,
 		}
+
+		if c_time.Equal(api_start_date) {
+			prev_candle = &new_candle
+			continue
+		}
+
+		if c_time.Equal(next_fill_time) {
+			next_fill_time = next_fill_time.Add(one_interval)
+			new_map.TimeMap[c_time_key] = &new_candle
+			prev_candle = &new_candle
+			continue
+		}
+
+		if c_time.Before(next_fill_time) {
+			new_map.TimeMap[c_time_key] = &new_candle
+			prev_candle = &new_candle
+			continue
+		}
+
+		for c_time.After(next_fill_time) {
+			if prev_candle != nil {
+				copy_candle := *prev_candle
+				next_fill_time_str := fmt.Sprint(next_fill_time.Unix())
+				new_map.TimeMap[next_fill_time_str] = &copy_candle
+				next_fill_time = next_fill_time.Add(one_interval)
+			}
+		}
 	}
+
 	wrapper.candles.SetMap(market, new_map)
 	candle, isSet := wrapper.candles.GetTime(market, from_time)
 	if !isSet {
-		logrus.Info("no value found for time" + fmt.Sprint(from_time.Unix()))
-		for i := 1; i < 7; i++ {
-			//try to cover an outage with value from previous interval
-			candle, isSet = wrapper.candles.GetTime(market, from_time.Add(-one_interval*time.Duration(i)))
-			if isSet {
-				return candle, nil
-			}
-
-			//try to cover with the next interval if previous is also empty
-			candle, isSet = wrapper.candles.GetTime(market, from_time.Add(one_interval*time.Duration(i)))
-			if isSet {
-				return candle, nil
-			}
-		}
-		return nil, errors.New("no data for that time  set panic")
+		return nil, errors.New("no data for that time set panic")
 	}
 
 	return candle, nil
@@ -173,19 +207,22 @@ func (wrapper *ExchangeWrapperSimulator) GetProducts() {
 	for i := start; i < 4; i++ {
 		var params = client.ListProductsParams{
 			Limit:  int32(CoinbaseMaxLimit),
-			Offset: int32(CoinbaseMaxLimit)*(i-1) + 1,
+			Offset: int32(CoinbaseMaxLimit) * (i - 1),
 			//ProductType: "SPOT",
 		}
 
-		res_products, _ := wrapper.coinbase.ListProducts(ctx, &params)
+		res_products, err := wrapper.coinbase.ListProducts(ctx, &params)
+		if err != nil {
+			return
+		}
 
 		var products string
 		for _, product := range res_products.Products {
-			products = products + fmt.Sprintln(*product.ProductId)
+			products = products + fmt.Sprintf("%s \t", *product.ProductId)
 		}
 
 		logrus.Info(products)
-		var sleep_len = time.Duration(10) * time.Second
+		var sleep_len = time.Duration(1) * time.Second
 		time.Sleep(sleep_len)
 	}
 }
@@ -215,7 +252,7 @@ func (wrapper *ExchangeWrapperSimulator) UpdateMappedOrders(market *environment.
 	ctx := context.Background()
 	//var to_include_first = time.Duration(wrapper.interval) * time.Minute
 	//var api_call_len = time.Duration(wrapper.interval*300) * time.Minute
-	var thirty_min = time.Duration(30) * time.Minute
+	var thirty_min = time.Duration(60) * time.Minute
 
 	var api_end_date = from_time.Add(thirty_min)
 
@@ -298,12 +335,91 @@ func (wrapper *ExchangeWrapperSimulator) GetOrderBook(market *environment.Market
 
 // BuyLimit here is just to implement the ExchangeWrapper Interface, do not use, use BuyMarket instead.
 func (wrapper *ExchangeWrapperSimulator) BuyLimit(market *environment.Market, amount float64, limit float64) (string, error) {
-	return "", errors.New("BuyLimit operation is not mockable")
+	baseBalance, _ := wrapper.GetBalance(market.BaseCurrency)
+	quoteBalance, _ := wrapper.GetBalance(market.MarketCurrency)
+
+	orderbook, err := wrapper.GetOrderBook(market)
+	if err != nil {
+		return "", errors.Annotate(err, "Cannot market buy without orderbook knowledge")
+	}
+
+	totalQuote := decimal.Zero
+	remainingAmount := decimal.NewFromFloat(amount)
+	expense := decimal.Zero
+
+	for _, ask := range orderbook.Asks {
+		if ask.Value.LessThan(decimal.NewFromFloat(limit)) {
+			continue
+		}
+
+		if remainingAmount.LessThanOrEqual(ask.Quantity) {
+			totalQuote = totalQuote.Add(remainingAmount)
+			expense = expense.Add(remainingAmount.Mul(ask.Value))
+			if expense.GreaterThan(*quoteBalance) {
+				return "", fmt.Errorf("cannot Buy not enough %s balance", market.BaseCurrency)
+			}
+			break
+		}
+		totalQuote = totalQuote.Add(ask.Quantity)
+		remainingAmount = remainingAmount.Sub(ask.Quantity)
+
+		expense = expense.Add(ask.Quantity.Mul(ask.Value))
+		if expense.GreaterThan(*quoteBalance) {
+			return "", fmt.Errorf("cannot Buy not enough %s balance", market.BaseCurrency)
+		}
+	}
+
+	wrapper.balances[market.BaseCurrency] = baseBalance.Add(totalQuote)
+	wrapper.balances[market.MarketCurrency] = quoteBalance.Sub(expense)
+
+	orderFakeID, err := uuid.NewV4()
+	if err != nil {
+		return "", errors.Annotate(err, "UUID Generation")
+	}
+	return fmt.Sprintf("FAKE_BUY-%s", orderFakeID), nil
 }
 
 // SellLimit here is just to implement the ExchangeWrapper Interface, do not use, use SellMarket instead.
 func (wrapper *ExchangeWrapperSimulator) SellLimit(market *environment.Market, amount float64, limit float64) (string, error) {
-	return "", errors.New("sellLimit operation is not mockable")
+	baseBalance, _ := wrapper.GetBalance(market.BaseCurrency)
+	quoteBalance, _ := wrapper.GetBalance(market.MarketCurrency)
+
+	orderbook, err := wrapper.GetOrderBook(market)
+	if err != nil {
+		return "", errors.Annotate(err, "cannot market sell without orderbook knowledge")
+	}
+
+	totalQuote := decimal.Zero
+	remainingAmount := decimal.NewFromFloat(amount)
+	gain := decimal.Zero
+
+	if baseBalance.LessThan(remainingAmount) {
+		return "", fmt.Errorf("cannot Sell: not enough %s balance", market.MarketCurrency)
+	}
+
+	for _, bid := range orderbook.Bids {
+		if bid.Value.GreaterThan(decimal.NewFromFloat(limit)) {
+			continue
+		}
+
+		if remainingAmount.LessThanOrEqual(bid.Quantity) {
+			totalQuote = totalQuote.Add(remainingAmount)
+			gain = gain.Add(remainingAmount.Mul(bid.Value))
+			break
+		}
+		totalQuote = totalQuote.Add(bid.Quantity)
+		remainingAmount = remainingAmount.Sub(bid.Quantity)
+		gain = gain.Add(bid.Quantity.Mul(bid.Value))
+	}
+
+	wrapper.balances[market.BaseCurrency] = baseBalance.Sub(totalQuote)
+	wrapper.balances[market.MarketCurrency] = quoteBalance.Add(gain)
+
+	orderFakeID, err := uuid.NewV4()
+	if err != nil {
+		return "", errors.Annotate(err, "UUID Generation")
+	}
+	return fmt.Sprintf("FAKE_SELL-%s", orderFakeID), nil
 }
 
 // BuyMarket performs a FAKE market buy action.

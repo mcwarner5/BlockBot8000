@@ -59,7 +59,8 @@ type CoinBalance struct {
 }
 
 type PortfolioBalance struct {
-	Balances map[string]*CoinBalance
+	StaticCoin string
+	Balances   map[string]*CoinBalance
 }
 
 func (is PortfolioBalance) String() string {
@@ -85,9 +86,18 @@ func (is PortfolioBalance) String() string {
 
 func (is PortfolioBalance) GetTotal() decimal.Decimal {
 	var curr_total decimal.Decimal
+	static_price := is.Balances[is.StaticCoin].MarketData.Last
 
 	for _, coin := range is.Balances {
-		curr_total = curr_total.Add(coin.Balance.Mul(coin.MarketData.Last))
+		if coin.Coin != is.StaticCoin {
+			curr_total = curr_total.Add(coin.Balance.Mul(coin.MarketData.Last).Mul(static_price))
+		} else {
+			curr_total = curr_total.Add(coin.Balance.Mul(coin.MarketData.Last))
+		}
+	}
+
+	if curr_total.IsZero() {
+		panic("No total found in portfolio")
 	}
 
 	return curr_total
@@ -98,8 +108,13 @@ func (is PortfolioBalance) GetPortfolioPercent(coin string) decimal.Decimal {
 	if !ok {
 		panic("coin not found")
 	}
+	if coin == is.StaticCoin {
+		return (coin_balance.Balance.Mul(coin_balance.MarketData.Last)).DivRound(is.GetTotal(), 4)
+	}
 
-	return (coin_balance.Balance.Mul(coin_balance.MarketData.Last)).DivRound(is.GetTotal(), 4)
+	static_price := is.Balances[is.StaticCoin].MarketData.Last
+
+	return (coin_balance.Balance.Mul(coin_balance.MarketData.Last).Mul(static_price)).DivRound(is.GetTotal(), 4)
 }
 
 // IntervalStrategy is an interval based strategy.
@@ -107,6 +122,7 @@ type RebalancerStrategy struct {
 	IntervalStrategy
 	AllowanceThreshold    decimal.Decimal
 	MarketCapMultiplier   decimal.Decimal
+	MinimumTradeSize      decimal.Decimal
 	StaticCoin            string
 	PortfolioDistribution map[string]decimal.Decimal
 	PortfolioBalances     *PortfolioBalance
@@ -127,6 +143,7 @@ func NewRebalancerStrategy(raw_strat environment.StrategyConfig) strategies.Stra
 		IntervalStrategy:      *NewIntervalStrategy(raw_strat),
 		AllowanceThreshold:    decimal.NewFromFloat(raw_strat.Spec["allowance_threshold"].(float64)),
 		MarketCapMultiplier:   decimal.NewFromFloat(raw_strat.Spec["market_cap_multiplier"].(float64)),
+		MinimumTradeSize:      decimal.NewFromFloat(0.01),
 		StaticCoin:            raw_strat.Spec["static_coin"].(string),
 		PortfolioDistribution: new_map,
 	}
@@ -155,7 +172,9 @@ func (is RebalancerStrategy) Setup(wrappers []exchanges.ExchangeWrapper, markets
 
 		coin_balance_info[coin] = &CoinBalance{coin, *balance, data, market}
 	}
-	is.InitialBalances = &PortfolioBalance{Balances: coin_balance_info}
+	is.InitialBalances = &PortfolioBalance{
+		StaticCoin: is.StaticCoin,
+		Balances:   coin_balance_info}
 
 	logrus.Info(is.InitialBalances.String())
 	return is, nil
@@ -167,36 +186,35 @@ func (is RebalancerStrategy) OnError(err error) {
 }
 
 func (is RebalancerStrategy) TearDown(wrappers []exchanges.ExchangeWrapper, markets []*environment.Market) (strategies.Strategy, error) {
-	logrus.Info(fmt.Println("RebalancerStrategy TearDown"))
+	logrus.Info(fmt.Sprintln("RebalancerStrategy TearDown"))
 	logrus.Info(is.InitialBalances.String())
 	logrus.Info(is.PortfolioBalances.String())
 
-	var btc_price, init_balance_total decimal.Decimal
+	curr_static_price := is.PortfolioBalances.Balances[is.StaticCoin].MarketData.Last
+	initial_total := is.InitialBalances.GetTotal()
+	curr_total := is.PortfolioBalances.GetTotal()
 
-	for coin, coin_balance := range is.InitialBalances.Balances {
-		for _, market := range markets {
+	var curr_nuetral_price, initial_neutral_price decimal.Decimal
+	var neutral_coin = "btc"
 
-			if coin == market.BaseCurrency {
-				data, err := wrappers[0].GetMarketSummary(market)
-				if err != nil {
-					return is, err
-				}
-				if market.BaseCurrency == "btc" {
-					btc_price = data.Last
-				}
-
-				init_balance_total = init_balance_total.Add(coin_balance.Balance.Mul(data.Last))
-			}
-
-		}
+	curr_nuetral_price = is.PortfolioBalances.Balances[neutral_coin].MarketData.Last
+	initial_neutral_price = is.InitialBalances.Balances[neutral_coin].MarketData.Last
+	if curr_nuetral_price.IsZero() {
+		curr_nuetral_price = curr_static_price
 	}
 
-	full_val := is.PortfolioBalances.GetTotal().DivRound(btc_price, 5)
-	init_val := init_balance_total.DivRound(btc_price, 5)
+	if initial_neutral_price.IsZero() {
+		initial_neutral_price = curr_static_price
+	}
 
-	logrus.Info(fmt.Printf("Initial Balance in BTC: %s\n", init_val.String()))
+	curr_val := curr_total.DivRound(curr_nuetral_price, 5)
+	init_val := initial_total.DivRound(initial_neutral_price, 5)
 
-	logrus.Info(fmt.Printf("Final Balance in BTC: %s\n", full_val.String()))
+	init_val_str := fmt.Sprintf("Initial Balance in %s: %s\n", neutral_coin, init_val.String())
+	final_val_str := fmt.Sprintf("Final Balance in %s: %s\n", neutral_coin, curr_val.String())
+
+	logrus.Info(init_val_str)
+	logrus.Info(final_val_str)
 
 	return is, nil
 }
@@ -230,6 +248,7 @@ func (is RebalancerStrategy) OnUpdate(wrappers []exchanges.ExchangeWrapper, mark
 func (is RebalancerStrategy) RebalanceBuys(wrappers []exchanges.ExchangeWrapper, markets []*environment.Market) (RebalancerStrategy, error) {
 	var total_buy_back_percent decimal.Decimal
 	var buy_logs string
+	old_balance_str := is.PortfolioBalances.String()
 
 	for _, coin_details := range is.GetBuyList() {
 		buy_back_coin := coin_details.Key
@@ -254,10 +273,14 @@ func (is RebalancerStrategy) RebalanceBuys(wrappers []exchanges.ExchangeWrapper,
 
 	if total_buy_back_percent.GreaterThan(decimal.Zero) {
 		total_buy_back_percent_str := total_buy_back_percent.Mul(decimal.NewFromInt(100)).Round(4).String()
-		buy_logs = fmt.Sprintln("$$$ Transaction Logs, Total: "+total_buy_back_percent_str+" $$$") + fmt.Sprintln("type | tn_pf_%\t| coin\t|") + buy_logs
+		buy_logs_headers := fmt.Sprintln("$$$ Transaction Logs, Total: "+total_buy_back_percent_str+" $$$") +
+			fmt.Sprintln("type | tn_pf_%\t| coin\t|")
+		buy_logs = buy_logs_headers + buy_logs
 
+		logrus.Info(old_balance_str)
 		logrus.Info(buy_logs)
-		//logrus.Info(is.PortfolioBalances.String())
+		logrus.Info(is.PortfolioBalances.String())
+		logrus.Info(fmt.Sprintln("------------------------------------------------------------------------------"))
 	}
 	return is, nil
 }
@@ -265,7 +288,7 @@ func (is RebalancerStrategy) RebalanceBuys(wrappers []exchanges.ExchangeWrapper,
 func (is RebalancerStrategy) RebalanceSells(wrappers []exchanges.ExchangeWrapper, markets []*environment.Market) (RebalancerStrategy, error) {
 	var total_sell_off_percent decimal.Decimal
 	var sell_logs string
-
+	old_balance_str := is.PortfolioBalances.String()
 	//for portfolio_coin, expected_percent := range is.PortfolioDistribution {
 	for _, coin_details := range is.GetSellList() {
 		portfolio_coin := coin_details.Key
@@ -290,10 +313,13 @@ func (is RebalancerStrategy) RebalanceSells(wrappers []exchanges.ExchangeWrapper
 
 	if total_sell_off_percent.GreaterThan(decimal.Zero) {
 		total_sell_off_percent_str := total_sell_off_percent.Mul(decimal.NewFromInt(100)).Round(4).String()
-		sell_logs = fmt.Sprintln("$$$ Transaction Logs, Total: "+total_sell_off_percent_str+" $$$") + fmt.Sprintln("type | tn_pf_%\t| coin\t|") + sell_logs
-
+		sell_logs_headers := fmt.Sprintln("$$$ Transaction Logs, Total: "+total_sell_off_percent_str+" $$$") +
+			fmt.Sprintln("type | tn_pf_%\t| coin\t|")
+		sell_logs = sell_logs_headers + sell_logs
+		logrus.Info(fmt.Sprintln("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$"))
+		logrus.Info(old_balance_str)
 		logrus.Info(sell_logs)
-		//logrus.Info(is.PortfolioBalances.String())
+		logrus.Info(is.PortfolioBalances.String())
 	}
 	return is, nil
 }
@@ -308,16 +334,19 @@ func (is RebalancerStrategy) GetSellList() []CoinPercentPair {
 	var excess, debt decimal.Decimal
 
 	for _, curr_coin := range full_portfolio_list {
-		curr_percent := is.CurrPercent(curr_coin.Key)
+		curr_percent := is.PortfolioBalances.GetPortfolioPercent(curr_coin.Key)
 		exp_percent := is.PortfolioDistribution[curr_coin.Key]
 
-		curr_difference := curr_percent.Sub(exp_percent).Round(6)
-		upper_bounds := exp_percent.Add(is.AllowanceThreshold)
-		lower_bounds := exp_percent.Sub(is.AllowanceThreshold)
+		curr_difference := curr_percent.Sub(exp_percent)
+		upper_bounds := exp_percent.Add(exp_percent.Mul(is.AllowanceThreshold))
+		lower_bounds := exp_percent.Sub(exp_percent.Mul(is.AllowanceThreshold))
+
+		if curr_difference.Abs().LessThan(is.MinimumTradeSize) {
+			continue
+		}
 
 		if curr_coin.Key == is.StaticCoin {
 			if curr_difference.GreaterThan(decimal.Zero) {
-				total_above_expected = total_above_expected.Add(curr_difference)
 				avail_static_coin_percent = curr_difference
 				continue
 			}
@@ -328,11 +357,11 @@ func (is RebalancerStrategy) GetSellList() []CoinPercentPair {
 			initial_sell_list = append(initial_sell_list, CoinPercentPair{curr_coin.Key, curr_difference})
 			continue
 		} else if curr_percent.LessThan(lower_bounds) {
-			debt = debt.Add(curr_difference)
+			debt = debt.Add(curr_difference.Abs())
 			continue
 		}
 
-		if curr_difference.GreaterThan(decimal.NewFromFloat(0.005)) {
+		if curr_difference.GreaterThan(is.MinimumTradeSize) {
 			potential_sell_list = append(potential_sell_list, CoinPercentPair{curr_coin.Key, curr_difference})
 			total_above_expected = total_above_expected.Add(curr_difference)
 		} else if curr_difference.LessThan(decimal.Zero) {
@@ -344,11 +373,18 @@ func (is RebalancerStrategy) GetSellList() []CoinPercentPair {
 		return initial_sell_list
 	}
 
+	logrus.Info(fmt.Sprintf("total debt found: %s", debt.String()))
+	logrus.Info(fmt.Sprintf("total excess found: %s", excess.String()))
+	logrus.Info(fmt.Sprintf("total static avail found: %s", avail_static_coin_percent.String()))
+
 	if excess.Add(avail_static_coin_percent).GreaterThan(debt) {
+		logrus.Info("debt covered with excess and avail static coin")
 		return initial_sell_list
 	}
 
 	remainder_debt := debt.Sub(excess.Add(avail_static_coin_percent))
+
+	logrus.Info(fmt.Sprintf("total remainder debt found: %s", remainder_debt.String()))
 
 	sort.Slice(potential_sell_list, func(i, j int) bool {
 		// 1. value is different - sort by value (in reverse order)
@@ -362,8 +398,16 @@ func (is RebalancerStrategy) GetSellList() []CoinPercentPair {
 	final_return_list = append(final_return_list, initial_sell_list...)
 
 	for _, curr_coin := range potential_sell_list {
-		if curr_coin.Value.GreaterThan(remainder_debt) {
-			final_return_list = append(final_return_list, CoinPercentPair{curr_coin.Key, remainder_debt})
+		if remainder_debt.GreaterThan(is.MinimumTradeSize) {
+			if curr_coin.Value.GreaterThan(remainder_debt) {
+				logrus.Info("remaining debt covered with avail coin " + curr_coin.Key)
+				return append(final_return_list, CoinPercentPair{curr_coin.Key, remainder_debt})
+			}
+			logrus.Info("partial debt covered with avail coin " + curr_coin.Key)
+			final_return_list = append(final_return_list, CoinPercentPair{curr_coin.Key, curr_coin.Value})
+			remainder_debt = remainder_debt.Sub(curr_coin.Value)
+		} else {
+			break
 		}
 	}
 
@@ -381,11 +425,15 @@ func (is RebalancerStrategy) GetBuyList() []CoinPercentPair {
 	var debt decimal.Decimal
 
 	for _, curr_coin := range full_portfolio_list {
-		curr_percent := is.CurrPercent(curr_coin.Key)
+		curr_percent := is.PortfolioBalances.GetPortfolioPercent(curr_coin.Key)
 		exp_percent := is.PortfolioDistribution[curr_coin.Key]
 
 		curr_difference := exp_percent.Sub(curr_percent).Round(6)
-		lower_bounds := exp_percent.Sub(is.AllowanceThreshold)
+		lower_bounds := exp_percent.Sub(exp_percent.Mul(is.AllowanceThreshold))
+
+		if curr_difference.Abs().LessThan(is.MinimumTradeSize) {
+			continue
+		}
 
 		if curr_coin.Key == is.StaticCoin {
 			if curr_difference.GreaterThan(decimal.Zero) {
@@ -397,8 +445,8 @@ func (is RebalancerStrategy) GetBuyList() []CoinPercentPair {
 		}
 
 		if curr_percent.LessThan(lower_bounds) {
-			debt = debt.Add(curr_difference)
-			initial_buy_list = append(initial_buy_list, CoinPercentPair{curr_coin.Key, curr_difference})
+			debt = debt.Add(curr_difference.Abs())
+			initial_buy_list = append(initial_buy_list, CoinPercentPair{curr_coin.Key, curr_difference.Abs()})
 			continue
 		}
 		if curr_difference.GreaterThan(decimal.NewFromFloat(0.005)) {
@@ -412,59 +460,36 @@ func (is RebalancerStrategy) GetBuyList() []CoinPercentPair {
 		return append(initial_buy_list, potential_buy_list...)
 	}
 
-	if avail_static_coin_percent.GreaterThan(debt) {
-		return initial_buy_list
-	}
-
 	avail_static_coin_after_debt := avail_static_coin_percent.Sub(debt)
 
 	if avail_static_coin_after_debt.LessThan(decimal.Zero) {
 		multiplier := avail_static_coin_percent.DivRound(debt, 5)
 		for _, curr_coin := range initial_buy_list {
-			final_return_list = append(final_return_list, CoinPercentPair{curr_coin.Key, curr_coin.Value.Mul(multiplier)})
+			final_amounts := curr_coin.Value.Mul(multiplier)
+			if final_amounts.LessThan(is.MinimumTradeSize) {
+				continue
+			}
+			final_return_list = append(final_return_list, CoinPercentPair{curr_coin.Key, final_amounts})
 		}
 		return final_return_list
 	}
 
-	if avail_static_coin_after_debt.LessThan(decimal.NewFromFloat32(0.005)) {
+	if avail_static_coin_after_debt.LessThan(is.MinimumTradeSize) {
 		return initial_buy_list
 	}
 
-	sort.Slice(potential_buy_list, func(i, j int) bool {
-		// 1. value is different - sort by value (in reverse order)
-		if potential_buy_list[i].Value != potential_buy_list[j].Value {
-			return potential_buy_list[i].Value.GreaterThan(potential_buy_list[j].Value)
-		}
-		// 2. only when value is the same - sort by key
-		return potential_buy_list[i].Key < potential_buy_list[j].Key
-	})
-
 	final_return_list = append(final_return_list, initial_buy_list...)
 
+	multiplier := avail_static_coin_after_debt.DivRound(total_below_expected, 5)
 	for _, curr_coin := range potential_buy_list {
-		if curr_coin.Value.GreaterThan(avail_static_coin_after_debt) {
-			return append(final_return_list, CoinPercentPair{curr_coin.Key, avail_static_coin_after_debt})
+		final_amounts := curr_coin.Value.Mul(multiplier)
+		if final_amounts.LessThan(is.MinimumTradeSize) {
+			continue
 		}
-		final_return_list = append(final_return_list, CoinPercentPair{curr_coin.Key, curr_coin.Value})
-		avail_static_coin_after_debt = avail_static_coin_after_debt.Sub(curr_coin.Value)
-
-		if avail_static_coin_after_debt.LessThan(decimal.NewFromFloat32(0.005)) {
-			return final_return_list
-		}
+		final_return_list = append(final_return_list, CoinPercentPair{curr_coin.Key, final_amounts})
 	}
 
 	return final_return_list
-}
-
-func (is RebalancerStrategy) CurrPercent(coin string) decimal.Decimal {
-	curr_balance := is.PortfolioBalances.Balances[coin].Balance
-	curr_price := is.PortfolioBalances.Balances[coin].MarketData.Last
-	return (curr_balance.Mul(curr_price)).Div(is.PortfolioBalances.GetTotal())
-}
-
-func (is RebalancerStrategy) CurrPercentFromBlanace(coin string, balance decimal.Decimal) decimal.Decimal {
-	curr_price := is.PortfolioBalances.Balances[coin].MarketData.Last
-	return (balance.Mul(curr_price)).Div(is.PortfolioBalances.GetTotal())
 }
 
 func (is RebalancerStrategy) UpdateStaticCoinBalance(wrappers []exchanges.ExchangeWrapper, markets []*environment.Market) (RebalancerStrategy, error) {
@@ -505,6 +530,7 @@ func (is RebalancerStrategy) UpdateCurrentBalances(wrappers []exchanges.Exchange
 				}
 
 				coin_balance_info[coin] = &CoinBalance{coin, *balance, data, market}
+				continue
 			}
 		}
 		_, ok := coin_balance_info[coin]
@@ -513,13 +539,13 @@ func (is RebalancerStrategy) UpdateCurrentBalances(wrappers []exchanges.Exchange
 		}
 	}
 
-	is.PortfolioBalances = &PortfolioBalance{Balances: coin_balance_info}
+	is.PortfolioBalances = &PortfolioBalance{StaticCoin: is.StaticCoin, Balances: coin_balance_info}
 
 	return is, nil
 }
 
 func (is RebalancerStrategy) SellBackToExpected(wrappers []exchanges.ExchangeWrapper, markets []*environment.Market, coin string) (decimal.Decimal, error) {
-	curr_percent := is.CurrPercent(coin)
+	curr_percent := is.PortfolioBalances.GetPortfolioPercent(coin)
 
 	if curr_percent.LessThan(is.PortfolioDistribution[coin]) {
 		return decimal.Decimal{}, errors.New("cannot sell coin that is already below its threshold")
@@ -532,13 +558,16 @@ func (is RebalancerStrategy) SellBackToExpected(wrappers []exchanges.ExchangeWra
 
 func (is RebalancerStrategy) SellPercent(wrappers []exchanges.ExchangeWrapper, markets []*environment.Market, coin string, sell_percent decimal.Decimal) error {
 	if coin != is.StaticCoin {
-		curr_price := is.PortfolioBalances.Balances[coin].MarketData.Bid
+		curr_price := is.PortfolioBalances.Balances[coin].MarketData.Last
+		curr_static_price := is.PortfolioBalances.Balances[is.StaticCoin].MarketData.Last
 		total := is.PortfolioBalances.GetTotal()
-		sell_amount := total.Mul(sell_percent).DivRound(curr_price, 2)
+		coin_price := curr_price.Mul(curr_static_price)
+		sell_amount := total.Mul(sell_percent).DivRound(coin_price, 8)
 
 		f_sell_amount, _ := sell_amount.Float64()
 
-		_, err := wrappers[0].SellMarket(is.PortfolioBalances.Balances[coin].Market, f_sell_amount)
+		//_, err := wrappers[0].SellMarket(is.PortfolioBalances.Balances[coin].Market, f_sell_amount)
+		_, err := wrappers[0].SellLimit(is.PortfolioBalances.Balances[coin].Market, f_sell_amount, curr_price.InexactFloat64())
 
 		if err != nil {
 			return err
@@ -552,7 +581,7 @@ func (is RebalancerStrategy) SellPercent(wrappers []exchanges.ExchangeWrapper, m
 
 func (is RebalancerStrategy) BuyBackToExpected(wrappers []exchanges.ExchangeWrapper, markets []*environment.Market, coin string) (decimal.Decimal, error) {
 
-	curr_percent := is.CurrPercent(coin)
+	curr_percent := is.PortfolioBalances.GetPortfolioPercent(coin)
 
 	if curr_percent.GreaterThan(is.PortfolioDistribution[coin]) {
 		return decimal.Decimal{}, errors.New("cannot buy coin that is already above its threshold")
@@ -566,11 +595,13 @@ func (is RebalancerStrategy) BuyBackToExpected(wrappers []exchanges.ExchangeWrap
 
 func (is RebalancerStrategy) BuyPercent(wrappers []exchanges.ExchangeWrapper, markets []*environment.Market, coin string, buy_percent decimal.Decimal) error {
 	if coin != is.StaticCoin {
-		curr_price := is.PortfolioBalances.Balances[coin].MarketData.Ask
+		curr_price := is.PortfolioBalances.Balances[coin].MarketData.Last
+		curr_static_price := is.PortfolioBalances.Balances[is.StaticCoin].MarketData.Last
+		coin_price := curr_price.Mul(curr_static_price)
 		total := is.PortfolioBalances.GetTotal()
 		total_cost := total.Mul(buy_percent)
-		total_static_coin := (is.PortfolioBalances.Balances[is.StaticCoin].Balance).Mul(is.PortfolioBalances.Balances[is.StaticCoin].MarketData.Ask)
-		buy_amount := total_cost.DivRound(curr_price, 2)
+		total_static_coin := (is.PortfolioBalances.Balances[is.StaticCoin].Balance).Mul(is.PortfolioBalances.Balances[is.StaticCoin].MarketData.Last)
+		buy_amount := total_cost.DivRound(coin_price, 8)
 
 		if total_cost.GreaterThan(total_static_coin) {
 
@@ -579,8 +610,8 @@ func (is RebalancerStrategy) BuyPercent(wrappers []exchanges.ExchangeWrapper, ma
 		}
 
 		f_buy_amount, _ := buy_amount.Float64()
-
-		_, err := wrappers[0].BuyMarket(is.PortfolioBalances.Balances[coin].Market, f_buy_amount)
+		//_, err := wrappers[0].BuyMarket(is.PortfolioBalances.Balances[coin].Market, f_buy_amount)
+		_, err := wrappers[0].BuyLimit(is.PortfolioBalances.Balances[coin].Market, f_buy_amount, curr_price.InexactFloat64())
 
 		if err != nil {
 			return err
