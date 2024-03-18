@@ -53,6 +53,8 @@ type ThresholdRebalancerSpecModel struct {
 	AllowanceThreshold        decimal.Decimal            `mapstructure:"allowance_threshold"`
 	MarketCapMultiplier       decimal.Decimal            `mapstructure:"market_cap_multiplier"`
 	StaticCoin                string                     `mapstructure:"static_coin"`
+	NuetralCoin               string                     `mapstructure:"nuetral_coin"`
+	MinTradeSize              decimal.Decimal            `mapstructure:"min_trade_size"`
 	PortfolioRatioPercent     map[string]decimal.Decimal `mapstructure:"portfolio_ratio_percent"`
 	IntervalStrategySpecModel `mapstructure:",squash"`
 }
