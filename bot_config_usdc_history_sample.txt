@@ -36,9 +36,11 @@ strategies:
     spec:
       name: MyFirstRebalancer
       interval: 1440
-      allowance_threshold: 0.20
+      allowance_threshold: 0.25
       market_cap_multiplier: 1.25
+      min_trade_size: 0.0075
       static_coin: usdt
+      nuetral_coin: eth
       portfolio_ratio_percent: 
         eth: 0.3
         dot: 0.125

@@ -6,7 +6,6 @@ import (
 	"reflect"
 
 	"github.com/shopspring/decimal"
-	"github.com/sirupsen/logrus"
 )
 
 type PortfolioAnalysis struct {
@@ -38,7 +37,7 @@ func (is PortfolioAnalysis) String() string {
 	pa_string += fmt.Sprintln("Current Balance:")
 	pa_string += is.CurrentBalances.String()
 
-	curr_diff, _ := is.GetCurrDiffInNuetralCoin()
+	curr_diff, _ := is.GetCurrDiffInNuetralCoin(is.InitialBalances, is.CurrentBalances)
 	pa_string += "Final difference in nuetral coin: " + curr_diff.String()
 
 	return pa_string
@@ -81,19 +80,16 @@ func NewPortfolioAnalysis(nuetral_coin string, initial_balances *PortfolioBalanc
 	}, nil
 }
 
-func (is *PortfolioAnalysis) GetCurrDiffInNuetralCoin() (decimal.Decimal, error) {
-	logrus.Info(is.InitialBalances.String())
-	logrus.Info(is.CurrentBalances.String())
-
-	init_val, err := is.InitialBalances.GetTotalValueInCoin(is.NuetralCoin)
+func (is *PortfolioAnalysis) GetCurrDiffInNuetralCoin(start *PortfolioBalance, end *PortfolioBalance) (decimal.Decimal, error) {
+	init_val, err := start.GetTotalValueInCoin(is.NuetralCoin)
 	if err != nil {
 		return decimal.Decimal{}, err
 	}
 
-	curr_val, err := is.CurrentBalances.GetTotalValueInCoin(is.NuetralCoin)
+	end_val, err := end.GetTotalValueInCoin(is.NuetralCoin)
 	if err != nil {
 		return decimal.Decimal{}, err
 	}
 
-	return curr_val.Sub(init_val), nil
+	return end_val.Sub(init_val), nil
 }
