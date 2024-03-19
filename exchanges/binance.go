@@ -293,14 +293,25 @@ func (wrapper *BinanceWrapper) GetDepositAddress(coinTicker string) (string, boo
 	return addr, exists
 }
 
+func (wrapper *BinanceWrapper) GetAllTrades(markets []*environment.Market) (*environment.TradeBook, error) {
+	return environment.NewTradeBook(), nil
+}
+func (wrapper *BinanceWrapper) GetAllMarketTrades(market *environment.Market) (*environment.TradeBook, error) {
+	return environment.NewTradeBook(), nil
+}
+
+func (wrapper *BinanceWrapper) GetFilteredTrades(market *environment.Market, symbol string, tradeSide environment.TradeSide, tradeType environment.TradeType, tradeStatus environment.TradeStatus) (*environment.TradeBook, error) {
+	return environment.NewTradeBook(), nil
+}
+
 // CalculateTradingFees calculates the trading fees for an order on a specified market.
 //
 //	NOTE: In Binance fees are currently hardcoded.
-func (wrapper *BinanceWrapper) CalculateTradingFees(market *environment.Market, amount float64, limit float64, orderType TradeType) float64 {
+func (wrapper *BinanceWrapper) CalculateTradingFees(market *environment.Market, amount float64, limit float64, orderSide environment.TradeSide) float64 {
 	var feePercentage float64
-	if orderType == MakerTrade {
+	if orderSide == environment.Sell {
 		feePercentage = 0.0010
-	} else if orderType == TakerTrade {
+	} else if orderSide == environment.Buy {
 		feePercentage = 0.0010
 	} else {
 		panic("Unknown trade type")

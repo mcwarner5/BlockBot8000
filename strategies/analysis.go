@@ -9,29 +9,15 @@ import (
 )
 
 type PortfolioAnalysis struct {
-	NuetralCoin      string
-	TotalBuyCount    decimal.Decimal
-	TotalBuyPercent  decimal.Decimal
-	TotalSellCount   decimal.Decimal
-	TotalSellPercent decimal.Decimal
-	TotalTrades      decimal.Decimal
-	TotalFeesPercent decimal.Decimal
-	TotalFessAmount  decimal.Decimal
-	InitialBalances  *PortfolioBalance
-	CurrentBalances  *PortfolioBalance
+	NuetralCoin     string
+	InitialBalances *PortfolioBalance
+	CurrentBalances *PortfolioBalance
 }
 
 func (is PortfolioAnalysis) String() string {
-	hundo := decimal.NewFromInt(100)
 	pa_string := fmt.Sprintln("Type: " + reflect.TypeOf(is).String())
 	pa_string += fmt.Sprintln("NuetralCoin: " + is.NuetralCoin)
-	pa_string += fmt.Sprintln("TotalBuyCount: " + is.TotalBuyCount.String())
-	pa_string += fmt.Sprintln("TotalBuyPercent: " + is.TotalBuyPercent.Mul(hundo).String() + "%")
-	pa_string += fmt.Sprintln("TotalSellCount: " + is.TotalSellCount.String())
-	pa_string += fmt.Sprintln("TotalSellPercent: " + is.TotalSellPercent.Mul(hundo).String() + "%")
-	pa_string += fmt.Sprintln("TotalTrades: " + is.TotalTrades.String())
-	pa_string += fmt.Sprintln("TotalFeesPercent: " + is.TotalFeesPercent.Mul(hundo).String() + "%")
-	pa_string += fmt.Sprintln("TotalFessAmount: " + is.TotalFessAmount.String())
+
 	pa_string += fmt.Sprintln("Initial Balance:")
 	pa_string += is.InitialBalances.String()
 	pa_string += fmt.Sprintln("Current Balance:")
@@ -67,16 +53,9 @@ func NewPortfolioAnalysis(nuetral_coin string, initial_balances *PortfolioBalanc
 	}
 
 	return &PortfolioAnalysis{
-		NuetralCoin:      nuetral_coin,
-		TotalBuyCount:    decimal.Zero,
-		TotalBuyPercent:  decimal.Zero,
-		TotalSellCount:   decimal.Zero,
-		TotalSellPercent: decimal.Zero,
-		TotalTrades:      decimal.Zero,
-		TotalFeesPercent: decimal.Zero,
-		TotalFessAmount:  decimal.Zero,
-		InitialBalances:  initial_balances,
-		CurrentBalances:  initial_balances,
+		NuetralCoin:     nuetral_coin,
+		InitialBalances: initial_balances,
+		CurrentBalances: initial_balances,
 	}, nil
 }
 

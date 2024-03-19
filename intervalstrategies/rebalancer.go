@@ -20,7 +20,10 @@ import (
 	"fmt"
 	"reflect"
 	"sort"
+	"time"
 
+	"github.com/gofrs/uuid"
+	"github.com/julien040/go-ternary"
 	"github.com/mcwarner5/BlockBot8000/environment"
 	"github.com/mcwarner5/BlockBot8000/exchanges"
 	strat "github.com/mcwarner5/BlockBot8000/strategies"
@@ -46,14 +49,16 @@ func NewRebalancerStrategy(raw_strat environment.StrategyConfig) strat.Strategy 
 	var old_map = raw_strat.Spec["portfolio_ratio_percent"].(map[string]interface{})
 	new_map := make(map[string]decimal.Decimal)
 
-	total := 0.0
+	total := decimal.Zero
+	one := decimal.NewFromInt(1)
 
 	for k, v := range old_map {
-		total += v.(float64)
-		new_map[k] = decimal.NewFromFloat(v.(float64))
+		new_val := decimal.NewFromFloat(v.(float64))
+		total = total.Add(new_val)
+		new_map[k] = new_val
 	}
 
-	if total != 1.0 {
+	if total.Sub(one).Abs().GreaterThan(decimal.NewFromFloat(0.01)) {
 		panic("Error: Rebalancer Portfolio does not add up to 100%")
 	}
 
@@ -109,6 +114,30 @@ func (is RebalancerStrategy) Setup(wrappers []exchanges.ExchangeWrapper, markets
 				if err != nil {
 					panic("rebalancer portfolio coin " + coin + " could not create a coin balance ")
 				}
+
+				if wrappers[0].Name() == "simulator" && balance.GreaterThan(decimal.Zero) {
+					orderFakeID, err := uuid.NewV4()
+					if err != nil {
+						return is, err
+					}
+
+					new_trade := environment.Trade{
+						Price:        data.Last,
+						AskQuantity:  *balance,
+						FillQuantity: *balance,
+						Fees:         decimal.Zero,
+						Market:       market.Name,
+						Side:         environment.Buy,
+						Status:       environment.Complete,
+						Type:         environment.MarketPrice,
+						TradeNumber:  orderFakeID.String(),
+						Timestamp:    time.Now(),
+					}
+					err = wrappers[0].(*exchanges.ExchangeWrapperSimulator).AddTrade(market, new_trade)
+					if err != nil {
+						return is, err
+					}
+				}
 			}
 		}
 		if !coin_found {
@@ -140,7 +169,14 @@ func (is RebalancerStrategy) OnError(err error) {
 
 func (is RebalancerStrategy) TearDown(wrappers []exchanges.ExchangeWrapper, markets []*environment.Market) (strat.Strategy, error) {
 	logrus.Info(fmt.Sprintln("RebalancerStrategy TearDown"))
+	tradeBook, err := wrappers[0].GetAllTrades(markets)
+	if err != nil {
+		return is, err
+	}
+
 	logrus.Info(is.String())
+	logrus.Info(tradeBook.String())
+
 	return is, nil
 }
 
@@ -215,7 +251,7 @@ func (is RebalancerStrategy) RebalanceSells(wrappers []exchanges.ExchangeWrapper
 	var sell_logs string
 	old_balance_str := is.Portfolio.CurrentBalances.String()
 	//for portfolio_coin, expected_percent := range is.PortfolioDistribution {
-	for _, coin_details := range is.GetSellList() {
+	for _, coin_details := range is.GetSellList(is.GetAvailiblePercentToSell(wrappers, markets)) {
 		portfolio_coin := coin_details.Key
 		sell_percent := coin_details.Value
 		//sell orders
@@ -249,8 +285,69 @@ func (is RebalancerStrategy) RebalanceSells(wrappers []exchanges.ExchangeWrapper
 	return is, nil
 }
 
-func (is RebalancerStrategy) GetSellList() []strat.CoinPercentPair {
-	full_portfolio_list := strat.MapToSlice(is.PortfolioDistribution)
+func (is RebalancerStrategy) GetAvailiblePercentToSell(wrappers []exchanges.ExchangeWrapper, markets []*environment.Market) map[string]decimal.Decimal {
+
+	avail_list := make(map[string]decimal.Decimal)
+	for coin := range is.PortfolioDistribution {
+		for _, market := range markets {
+			if coin == market.BaseCurrency && coin != is.StaticCoin {
+				avail_list[coin] = decimal.Zero
+
+				marketTades, err := wrappers[0].GetAllMarketTrades(market)
+				if err != nil {
+					return avail_list
+				}
+
+				data, err := wrappers[0].GetMarketSummary(market)
+				if err != nil {
+					return avail_list
+				}
+
+				avail_amount, err := wrappers[0].GetBalance(market.BaseCurrency)
+				if err != nil {
+					return avail_list
+				}
+				total_worth := decimal.Zero
+				if avail_amount.GreaterThan(decimal.Zero) {
+					total_worth = avail_amount.Mul(data.Last)
+				}
+
+				for _, trade := range marketTades.Trades {
+					if trade.Status != environment.Complete {
+						continue
+					}
+
+					if trade.Side == environment.Buy {
+						total_worth = total_worth.Sub(trade.Price.Mul(trade.FillQuantity))
+						continue
+					}
+					if trade.Side == environment.Sell {
+						total_worth = total_worth.Add(trade.Price.Mul(trade.FillQuantity))
+						continue
+					}
+
+				}
+
+				if total_worth.LessThan(is.MinimumTradeSize) {
+					continue
+				}
+
+				curr_total := is.Portfolio.CurrentBalances.GetTotal()
+				total_pos_percent := total_worth.DivRound(curr_total, 4)
+
+				if total_pos_percent.LessThan(is.MinimumTradeSize) {
+					continue
+				}
+				avail_list[coin] = total_pos_percent
+			}
+		}
+		continue
+	}
+	return avail_list
+}
+
+func (is RebalancerStrategy) GetSellList(availible_to_sell map[string]decimal.Decimal) []strat.CoinPercentPair {
+	full_portfolio_list := strat.MapToSlice(availible_to_sell)
 	initial_sell_list := make([]strat.CoinPercentPair, 0)
 	potential_sell_list := make([]strat.CoinPercentPair, 0)
 	final_return_list := make([]strat.CoinPercentPair, 0)
@@ -279,7 +376,15 @@ func (is RebalancerStrategy) GetSellList() []strat.CoinPercentPair {
 
 		if curr_percent.GreaterThan(upper_bounds) {
 			excess = excess.Add(curr_difference)
-			pair, _ := strat.NewCoinPercetPair(curr_coin.Key, curr_difference)
+
+			if curr_coin.Value.LessThan(is.MinimumTradeSize) {
+				continue
+			}
+			aval_percet := ternary.If(curr_coin.Value.GreaterThanOrEqual(curr_difference), curr_difference, curr_coin.Value)
+			if aval_percet.LessThan(is.MinimumTradeSize) {
+				continue
+			}
+			pair, _ := strat.NewCoinPercetPair(curr_coin.Key, aval_percet)
 			initial_sell_list = append(initial_sell_list, pair)
 			continue
 		} else if curr_percent.LessThan(lower_bounds) {
@@ -288,7 +393,11 @@ func (is RebalancerStrategy) GetSellList() []strat.CoinPercentPair {
 		}
 
 		if curr_difference.GreaterThan(is.MinimumTradeSize) {
-			pair, _ := strat.NewCoinPercetPair(curr_coin.Key, curr_difference)
+			aval_percet := ternary.If(curr_coin.Value.GreaterThanOrEqual(curr_difference), curr_difference, curr_coin.Value)
+			if aval_percet.LessThan(is.MinimumTradeSize) {
+				continue
+			}
+			pair, _ := strat.NewCoinPercetPair(curr_coin.Key, aval_percet)
 			potential_sell_list = append(potential_sell_list, pair)
 			total_above_expected = total_above_expected.Add(curr_difference)
 		} else if curr_difference.LessThan(decimal.Zero) {

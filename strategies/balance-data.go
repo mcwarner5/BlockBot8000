@@ -125,6 +125,24 @@ func (is PortfolioBalance) String() string {
 	return pb_string
 }
 
+func (is PortfolioBalance) GetValue(coin string) decimal.Decimal {
+	var curr_total decimal.Decimal
+	static_price := is.Balances[is.StaticCoin].MarketData.Last
+	coinBalance := is.Balances[coin]
+
+	if coin != is.StaticCoin {
+		curr_total = curr_total.Add(coinBalance.Balance.Mul(coinBalance.MarketData.Last).Mul(static_price))
+	} else {
+		curr_total = curr_total.Add(coinBalance.Balance.Mul(coinBalance.MarketData.Last))
+	}
+
+	if curr_total.IsZero() {
+		panic("No total found in portfolio")
+	}
+
+	return curr_total
+}
+
 func (is PortfolioBalance) GetTotal() decimal.Decimal {
 	var curr_total decimal.Decimal
 	static_price := is.Balances[is.StaticCoin].MarketData.Last

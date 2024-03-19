@@ -274,12 +274,23 @@ func (wrapper *HitBtcWrapperV2) GetDepositAddress(coinTicker string) (string, bo
 	return addr, exists
 }
 
+func (wrapper *HitBtcWrapperV2) GetAllTrades(markets []*environment.Market) (*environment.TradeBook, error) {
+	return environment.NewTradeBook(), nil
+}
+func (wrapper *HitBtcWrapperV2) GetAllMarketTrades(market *environment.Market) (*environment.TradeBook, error) {
+	return environment.NewTradeBook(), nil
+}
+
+func (wrapper *HitBtcWrapperV2) GetFilteredTrades(market *environment.Market, symbol string, tradeSide environment.TradeSide, tradeType environment.TradeType, tradeStatus environment.TradeStatus) (*environment.TradeBook, error) {
+	return environment.NewTradeBook(), nil
+}
+
 // CalculateTradingFees calculates the trading fees for an order on a specified market.
-func (wrapper *HitBtcWrapperV2) CalculateTradingFees(market *environment.Market, amount float64, limit float64, orderType TradeType) float64 {
+func (wrapper *HitBtcWrapperV2) CalculateTradingFees(market *environment.Market, amount float64, limit float64, orderSide environment.TradeSide) float64 {
 	var feePercentage float64
-	if orderType == MakerTrade {
+	if orderSide == environment.Sell {
 		feePercentage = 0.0025
-	} else if orderType == TakerTrade {
+	} else if orderSide == environment.Buy {
 		feePercentage = 0.0025
 	} else {
 		panic("Unknown trade type")

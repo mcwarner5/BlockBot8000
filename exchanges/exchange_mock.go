@@ -22,6 +22,7 @@ type ExchangeWrapperSimulator struct {
 	innerWrapper ExchangeWrapper
 	candles      *MappedCandlesCache
 	orders       *MappedOrdersCache
+	trades       *TradeBookbookCache
 	coinbase     client.CoinbaseClient
 	balances     map[string]decimal.Decimal
 	interval     int
@@ -56,6 +57,7 @@ func NewExchangeWrapperSimulator(mockedWrapper ExchangeWrapper, simConfigs envir
 		innerWrapper: mockedWrapper,
 		candles:      NewMappedCandlesCache(),
 		orders:       NewMappedOrdersCache(),
+		trades:       NewTradeBookbookCache(),
 		coinbase:     client.NewClient(&creds),
 		balances:     simConfigs.SimFakeBalances,
 		interval:     simConfigs.SimInterval,
@@ -81,7 +83,10 @@ func (wrapper *ExchangeWrapperSimulator) IncrementCurrDate() error {
 	*wrapper.currDate = wrapper.currDate.Add(interval_len)
 
 	if wrapper.currDate.After(wrapper.endDate) {
-		logrus.Info("End of Simulation:" + wrapper.currDate.String())
+		end_str := fmt.Sprintln("End of Simulation")
+		end_str += "Start Date:" + wrapper.startDate.String()
+		end_str += "End Date:" + wrapper.currDate.String()
+		logrus.Info(end_str)
 		return errors.New("End of Simulation Date has been reached")
 	}
 
@@ -346,6 +351,7 @@ func (wrapper *ExchangeWrapperSimulator) BuyLimit(market *environment.Market, am
 	totalQuote := decimal.Zero
 	remainingAmount := decimal.NewFromFloat(amount)
 	expense := decimal.Zero
+	avg_price := decimal.Zero
 
 	for _, ask := range orderbook.Asks {
 		if ask.Value.LessThan(decimal.NewFromFloat(limit)) {
@@ -355,12 +361,18 @@ func (wrapper *ExchangeWrapperSimulator) BuyLimit(market *environment.Market, am
 		if remainingAmount.LessThanOrEqual(ask.Quantity) {
 			totalQuote = totalQuote.Add(remainingAmount)
 			expense = expense.Add(remainingAmount.Mul(ask.Value))
+			avg_price = ask.Value
 			if expense.GreaterThan(*quoteBalance) {
 				return "", fmt.Errorf("cannot Buy not enough %s balance", market.BaseCurrency)
 			}
 			break
 		}
-		totalQuote = totalQuote.Add(ask.Quantity)
+
+		old_totalQuote := totalQuote
+		new_totalQuote := totalQuote.Add(ask.Quantity)
+		avg_price = (old_totalQuote.Mul(avg_price).Add((ask.Quantity.Mul(ask.Value)))).Div(new_totalQuote)
+
+		totalQuote = new_totalQuote
 		remainingAmount = remainingAmount.Sub(ask.Quantity)
 
 		expense = expense.Add(ask.Quantity.Mul(ask.Value))
@@ -376,7 +388,22 @@ func (wrapper *ExchangeWrapperSimulator) BuyLimit(market *environment.Market, am
 	if err != nil {
 		return "", errors.Annotate(err, "UUID Generation")
 	}
-	return fmt.Sprintf("FAKE_BUY-%s", orderFakeID), nil
+
+	new_trade := environment.Trade{
+		Price:        avg_price,
+		AskQuantity:  decimal.NewFromFloat(amount),
+		FillQuantity: totalQuote,
+		Fees:         decimal.Zero,
+		Market:       market.Name,
+		Side:         environment.Buy,
+		Status:       environment.Complete,
+		Type:         environment.LimitOrder,
+		TradeNumber:  orderFakeID.String(),
+		Timestamp:    time.Now(),
+	}
+	wrapper.AddTrade(market, new_trade)
+
+	return fmt.Sprintf("FAKE_BUY-%s", new_trade.String()), nil
 }
 
 // SellLimit here is just to implement the ExchangeWrapper Interface, do not use, use SellMarket instead.
@@ -392,6 +419,7 @@ func (wrapper *ExchangeWrapperSimulator) SellLimit(market *environment.Market, a
 	totalQuote := decimal.Zero
 	remainingAmount := decimal.NewFromFloat(amount)
 	gain := decimal.Zero
+	avg_price := decimal.Zero
 
 	if baseBalance.LessThan(remainingAmount) {
 		return "", fmt.Errorf("cannot Sell: not enough %s balance", market.MarketCurrency)
@@ -405,9 +433,15 @@ func (wrapper *ExchangeWrapperSimulator) SellLimit(market *environment.Market, a
 		if remainingAmount.LessThanOrEqual(bid.Quantity) {
 			totalQuote = totalQuote.Add(remainingAmount)
 			gain = gain.Add(remainingAmount.Mul(bid.Value))
+			avg_price = bid.Value
 			break
 		}
-		totalQuote = totalQuote.Add(bid.Quantity)
+
+		old_totalQuote := totalQuote
+		new_totalQuote := totalQuote.Add(bid.Quantity)
+		avg_price = (old_totalQuote.Mul(avg_price).Add((bid.Quantity.Mul(bid.Value)))).Div(new_totalQuote)
+
+		totalQuote = new_totalQuote
 		remainingAmount = remainingAmount.Sub(bid.Quantity)
 		gain = gain.Add(bid.Quantity.Mul(bid.Value))
 	}
@@ -419,7 +453,22 @@ func (wrapper *ExchangeWrapperSimulator) SellLimit(market *environment.Market, a
 	if err != nil {
 		return "", errors.Annotate(err, "UUID Generation")
 	}
-	return fmt.Sprintf("FAKE_SELL-%s", orderFakeID), nil
+
+	new_trade := environment.Trade{
+		Price:        avg_price,
+		AskQuantity:  decimal.NewFromFloat(amount),
+		FillQuantity: totalQuote,
+		Fees:         decimal.Zero,
+		Market:       market.Name,
+		Side:         environment.Sell,
+		Status:       environment.Complete,
+		Type:         environment.LimitOrder,
+		TradeNumber:  orderFakeID.String(),
+		Timestamp:    time.Now(),
+	}
+	wrapper.AddTrade(market, new_trade)
+
+	return fmt.Sprintf("FAKE_SELL-%s", new_trade.String()), nil
 }
 
 // BuyMarket performs a FAKE market buy action.
@@ -435,17 +484,24 @@ func (wrapper *ExchangeWrapperSimulator) BuyMarket(market *environment.Market, a
 	totalQuote := decimal.Zero
 	remainingAmount := decimal.NewFromFloat(amount)
 	expense := decimal.Zero
+	avg_price := decimal.Zero
 
 	for _, ask := range orderbook.Asks {
 		if remainingAmount.LessThanOrEqual(ask.Quantity) {
 			totalQuote = totalQuote.Add(remainingAmount)
 			expense = expense.Add(remainingAmount.Mul(ask.Value))
+			avg_price = ask.Value
 			if expense.GreaterThan(*quoteBalance) {
 				return "", fmt.Errorf("cannot Buy not enough %s balance", market.BaseCurrency)
 			}
 			break
 		}
-		totalQuote = totalQuote.Add(ask.Quantity)
+
+		old_totalQuote := totalQuote
+		new_totalQuote := totalQuote.Add(ask.Quantity)
+		avg_price = (old_totalQuote.Mul(avg_price).Add((ask.Quantity.Mul(ask.Value)))).Div(new_totalQuote)
+
+		totalQuote = new_totalQuote
 		remainingAmount = remainingAmount.Sub(ask.Quantity)
 
 		expense = expense.Add(ask.Quantity.Mul(ask.Value))
@@ -461,7 +517,21 @@ func (wrapper *ExchangeWrapperSimulator) BuyMarket(market *environment.Market, a
 	if err != nil {
 		return "", errors.Annotate(err, "UUID Generation")
 	}
-	return fmt.Sprintf("FAKE_BUY-%s", orderFakeID), nil
+	new_trade := environment.Trade{
+		Price:        avg_price,
+		AskQuantity:  decimal.NewFromFloat(amount),
+		FillQuantity: totalQuote,
+		Fees:         decimal.Zero,
+		Market:       market.Name,
+		Side:         environment.Buy,
+		Status:       environment.Complete,
+		Type:         environment.MarketPrice,
+		TradeNumber:  orderFakeID.String(),
+		Timestamp:    time.Now(),
+	}
+	wrapper.AddTrade(market, new_trade)
+
+	return fmt.Sprintf("FAKE_BUY-%s", new_trade.String()), nil
 }
 
 // SellMarket performs a FAKE market buy action.
@@ -477,6 +547,7 @@ func (wrapper *ExchangeWrapperSimulator) SellMarket(market *environment.Market, 
 	totalQuote := decimal.Zero
 	remainingAmount := decimal.NewFromFloat(amount)
 	gain := decimal.Zero
+	avg_price := decimal.Zero
 
 	if baseBalance.LessThan(remainingAmount) {
 		return "", fmt.Errorf("cannot Sell: not enough %s balance", market.MarketCurrency)
@@ -486,9 +557,15 @@ func (wrapper *ExchangeWrapperSimulator) SellMarket(market *environment.Market, 
 		if remainingAmount.LessThanOrEqual(bid.Quantity) {
 			totalQuote = totalQuote.Add(remainingAmount)
 			gain = gain.Add(remainingAmount.Mul(bid.Value))
+			avg_price = bid.Value
 			break
 		}
-		totalQuote = totalQuote.Add(bid.Quantity)
+
+		old_totalQuote := totalQuote
+		new_totalQuote := totalQuote.Add(bid.Quantity)
+		avg_price = (old_totalQuote.Mul(avg_price).Add((bid.Quantity.Mul(bid.Value)))).Div(new_totalQuote)
+
+		totalQuote = new_totalQuote
 		remainingAmount = remainingAmount.Sub(bid.Quantity)
 		gain = gain.Add(bid.Quantity.Mul(bid.Value))
 	}
@@ -500,12 +577,83 @@ func (wrapper *ExchangeWrapperSimulator) SellMarket(market *environment.Market, 
 	if err != nil {
 		return "", errors.Annotate(err, "UUID Generation")
 	}
-	return fmt.Sprintf("FAKE_SELL-%s", orderFakeID), nil
+
+	new_trade := environment.Trade{
+		Price:        avg_price,
+		AskQuantity:  decimal.NewFromFloat(amount),
+		FillQuantity: totalQuote,
+		Fees:         decimal.Zero,
+		Market:       market.Name,
+		Side:         environment.Sell,
+		Status:       environment.Complete,
+		Type:         environment.MarketPrice,
+		TradeNumber:  orderFakeID.String(),
+		Timestamp:    time.Now(),
+	}
+	wrapper.AddTrade(market, new_trade)
+
+	return fmt.Sprintf("FAKE_SELL-%s", new_trade.String()), nil
+}
+
+func (wrapper *ExchangeWrapperSimulator) AddTrade(market *environment.Market, trade environment.Trade) error {
+	tradeBook, isSet := wrapper.trades.Get(market)
+	if !isSet {
+		wrapper.trades.Set(market, &environment.TradeBook{Trades: []environment.Trade{trade}})
+	} else {
+		wrapper.trades.Set(market, &environment.TradeBook{Trades: append(tradeBook.Trades, trade)})
+	}
+
+	return nil
+}
+
+func (wrapper *ExchangeWrapperSimulator) UpdateTrades(market *environment.Market, from_time time.Time) (*environment.TradeBook, error) {
+	return nil, errors.New("error: UpdateTrades not defined for Simulator")
+}
+
+func (wrapper *ExchangeWrapperSimulator) GetAllTrades(markets []*environment.Market) (*environment.TradeBook, error) {
+	all_trades := environment.TradeBook{}
+	for _, market := range markets {
+		new_tradeBook, isSet := wrapper.trades.Get(market)
+		if !isSet {
+			continue
+		}
+
+		all_trades.Trades = append(all_trades.Trades, new_tradeBook.Trades...)
+	}
+
+	return &all_trades, nil
+}
+func (wrapper *ExchangeWrapperSimulator) GetAllMarketTrades(market *environment.Market) (*environment.TradeBook, error) {
+	tradeBook, isSet := wrapper.trades.Get(market)
+	if !isSet {
+		return nil, errors.New("Could not find trades for market " + market.Name)
+	}
+	return tradeBook, nil
+}
+
+func (wrapper *ExchangeWrapperSimulator) GetFilteredTrades(market *environment.Market, symbol string, tradeSide environment.TradeSide, tradeType environment.TradeType, tradeStatus environment.TradeStatus) (*environment.TradeBook, error) {
+	tradeBook, isSet := wrapper.trades.Get(market)
+	finalTradeBook := environment.NewTradeBook()
+	if !isSet {
+		var err error
+		tradeBook, err = wrapper.UpdateTrades(market, *wrapper.currDate)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	for _, trade := range tradeBook.Trades {
+		if trade.Market == symbol && trade.Side == tradeSide && trade.Type == tradeType && trade.Status == tradeStatus {
+			finalTradeBook.Trades = append(finalTradeBook.Trades, trade)
+		}
+	}
+
+	return finalTradeBook, nil
 }
 
 // CalculateTradingFees calculates the trading fees for an order on a specified market.
-func (wrapper *ExchangeWrapperSimulator) CalculateTradingFees(market *environment.Market, amount float64, limit float64, orderType TradeType) float64 {
-	return wrapper.innerWrapper.CalculateTradingFees(market, amount, limit, orderType)
+func (wrapper *ExchangeWrapperSimulator) CalculateTradingFees(market *environment.Market, amount float64, limit float64, orderSide environment.TradeSide) float64 {
+	return wrapper.innerWrapper.CalculateTradingFees(market, amount, limit, orderSide)
 }
 
 // CalculateWithdrawFees calculates the withdrawal fees on a specified market.

@@ -22,16 +22,6 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-// TradeType represents a type of order, from trading fees point of view.
-type TradeType string
-
-const (
-	// TakerTrade represents the "buy" order type.
-	TakerTrade = "taker"
-	// MakerTrade represents the "sell" order type.
-	MakerTrade = "maker"
-)
-
 // ExchangeWrapper provides a generic wrapper for exchange services.
 type ExchangeWrapper interface {
 	Name() string                                                                    // Gets the name of the exchange.
@@ -44,8 +34,11 @@ type ExchangeWrapper interface {
 	BuyMarket(market *environment.Market, amount float64) (string, error)                // Performs a market buy action.
 	SellMarket(market *environment.Market, amount float64) (string, error)               // Performs a market sell action.
 
-	CalculateTradingFees(market *environment.Market, amount float64, limit float64, orderType TradeType) float64 // Calculates the trading fees for an order on a specified market.
-	CalculateWithdrawFees(market *environment.Market, amount float64) float64                                    // Calculates the withdrawal fees on a specified market.
+	GetAllTrades(markets []*environment.Market) (*environment.TradeBook, error)
+	GetAllMarketTrades(market *environment.Market) (*environment.TradeBook, error)
+	GetFilteredTrades(market *environment.Market, symbol string, tradeSide environment.TradeSide, tradeType environment.TradeType, tradeStatus environment.TradeStatus) (*environment.TradeBook, error)
+	CalculateTradingFees(market *environment.Market, amount float64, limit float64, orderSide environment.TradeSide) float64 // Calculates the trading fees for an order on a specified market.
+	CalculateWithdrawFees(market *environment.Market, amount float64) float64                                                // Calculates the withdrawal fees on a specified market.
 
 	GetBalance(symbol string) (*decimal.Decimal, error) // Gets the balance of the user of the specified currency.
 	GetDepositAddress(coinTicker string) (string, bool) // Gets the deposit address for the specified coin on the exchange, if exists.

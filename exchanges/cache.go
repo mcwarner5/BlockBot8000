@@ -71,6 +71,37 @@ func (cc *CandlesCache) Get(market *environment.Market) ([]environment.CandleSti
 }
 
 // OrderbookCache represents a local orderbook cache for every exchange. To allow dinamic polling from multiple sources (REST + Websocket)
+type TradeBookbookCache struct {
+	mutex    *sync.RWMutex
+	internal map[*environment.Market]*environment.TradeBook
+}
+
+// NewOrderbookCache creates a new OrderbookCache Object
+func NewTradeBookbookCache() *TradeBookbookCache {
+	return &TradeBookbookCache{
+		mutex:    &sync.RWMutex{},
+		internal: make(map[*environment.Market]*environment.TradeBook),
+	}
+}
+
+// Set sets a value for the specified key.
+func (cc *TradeBookbookCache) Set(market *environment.Market, book *environment.TradeBook) *environment.TradeBook {
+	cc.mutex.Lock()
+	old := cc.internal[market]
+	cc.internal[market] = book
+	cc.mutex.Unlock()
+	return old
+}
+
+// Get gets the value for the specified key.
+func (cc *TradeBookbookCache) Get(market *environment.Market) (*environment.TradeBook, bool) {
+	cc.mutex.RLock()
+	ret, isSet := cc.internal[market]
+	cc.mutex.RUnlock()
+	return ret, isSet
+}
+
+// OrderbookCache represents a local orderbook cache for every exchange. To allow dinamic polling from multiple sources (REST + Websocket)
 type OrderbookCache struct {
 	mutex    *sync.RWMutex
 	internal map[*environment.Market]*environment.OrderBook
