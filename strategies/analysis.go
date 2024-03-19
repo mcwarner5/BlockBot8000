@@ -24,7 +24,13 @@ func (is PortfolioAnalysis) String() string {
 	pa_string += is.CurrentBalances.String()
 
 	curr_diff, _ := is.GetCurrDiffInNuetralCoin(is.InitialBalances, is.CurrentBalances)
-	pa_string += "Final difference in nuetral coin: " + curr_diff.String()
+	init_val, _ := is.InitialBalances.GetTotalValueInCoin(is.NuetralCoin)
+	curr_val, _ := is.CurrentBalances.GetTotalValueInCoin(is.NuetralCoin)
+
+	pa_string += fmt.Sprintf("Initial Value in nuetral coin: %s %s", init_val.String(), is.NuetralCoin) + "\n"
+	pa_string += fmt.Sprintf("Current Value in nuetral coin: %s %s", curr_val.String(), is.NuetralCoin) + "\n"
+
+	pa_string += fmt.Sprintf("Final difference in nuetral coin: %s %s", curr_diff.String(), is.NuetralCoin) + "\n"
 
 	return pa_string
 }

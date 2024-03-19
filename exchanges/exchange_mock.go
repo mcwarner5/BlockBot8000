@@ -84,8 +84,8 @@ func (wrapper *ExchangeWrapperSimulator) IncrementCurrDate() error {
 
 	if wrapper.currDate.After(wrapper.endDate) {
 		end_str := fmt.Sprintln("End of Simulation")
-		end_str += "Start Date:" + wrapper.startDate.String()
-		end_str += "End Date:" + wrapper.currDate.String()
+		end_str += "Simulation Start Date:" + wrapper.startDate.String() + "\n"
+		end_str += "Simulation End Date:" + wrapper.currDate.String() + "\n"
 		logrus.Info(end_str)
 		return errors.New("End of Simulation Date has been reached")
 	}

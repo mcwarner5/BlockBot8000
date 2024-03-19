@@ -81,8 +81,8 @@ func (book TradeBook) String() string {
 	pa_string += fmt.Sprintln("TotalSellCount: " + TotalSellCount.String())
 	pa_string += fmt.Sprintln("TotalBuyAmount: " + TotalBuyAmount.Round(4).String())
 	pa_string += fmt.Sprintln("TotalSellAmount: " + TotalSellAmount.Round(4).String())
-	pa_string += fmt.Sprintln("TotalFessAmount: " + TotalFessAmount.Round(4).String())
-	return fmt.Sprintln("TRADES:") +
+	pa_string += fmt.Sprintln("TotalFeesAmount: " + TotalFessAmount.Round(4).String())
+	return fmt.Sprintln("<><>TRADES<><>") +
 		fmt.Sprintln(pa_string)
 }
 
