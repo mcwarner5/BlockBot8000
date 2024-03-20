@@ -3,22 +3,44 @@ package strategies
 import (
 	"errors"
 	"fmt"
-	"reflect"
+	"time"
 
 	"github.com/shopspring/decimal"
 )
 
 type PortfolioAnalysis struct {
 	NuetralCoin     string
+	StartDate       time.Time
+	CurrentDate     time.Time
 	InitialBalances *PortfolioBalance
 	CurrentBalances *PortfolioBalance
 }
 
-func (is PortfolioAnalysis) String() string {
-	pa_string := fmt.Sprintln("Type: " + reflect.TypeOf(is).String())
-	pa_string += fmt.Sprintln("NuetralCoin: " + is.NuetralCoin)
+func (is PortfolioAnalysis) SetCurrDate(currDate time.Time) (*PortfolioAnalysis, error) {
+	if currDate.Before(is.StartDate) {
+		return &is, errors.New("portfolio analysis current date set is before its start date")
+	}
+	is.CurrentDate = currDate
+	return &is, nil
+}
 
-	pa_string += fmt.Sprintln("Initial Balance:")
+func (is PortfolioAnalysis) CalcCurrAPR() decimal.Decimal {
+	curr_diff, _ := is.GetCurrDiffInNuetralCoin(is.InitialBalances, is.CurrentBalances)
+	init_val, _ := is.InitialBalances.GetTotalValueInCoin(is.NuetralCoin)
+	diff_days := decimal.NewFromInt(1)
+	year := decimal.NewFromInt(365)
+	hundo := decimal.NewFromInt(100)
+
+	if is.CurrentDate.After(is.StartDate) {
+		diff_days = decimal.NewFromFloat(is.CurrentDate.Sub(is.StartDate).Hours()).Div(decimal.NewFromInt(24))
+	}
+
+	apr := (curr_diff.Div(init_val)).Div(diff_days).Mul(year).Mul(hundo).Round(4)
+	return apr
+}
+
+func (is PortfolioAnalysis) String() string {
+	pa_string := fmt.Sprintln("Initial Balance:")
 	pa_string += is.InitialBalances.String()
 	pa_string += fmt.Sprintln("Current Balance:")
 	pa_string += is.CurrentBalances.String()
@@ -31,11 +53,11 @@ func (is PortfolioAnalysis) String() string {
 	pa_string += fmt.Sprintf("Current Value in nuetral coin: %s %s", curr_val.String(), is.NuetralCoin) + "\n"
 
 	pa_string += fmt.Sprintf("Final difference in nuetral coin: %s %s", curr_diff.String(), is.NuetralCoin) + "\n"
-
+	pa_string += fmt.Sprintf("Final APR in nuetral coin: %s%%", is.CalcCurrAPR().String()) + "\n"
 	return pa_string
 }
 
-func NewPortfolioAnalysis(nuetral_coin string, initial_balances *PortfolioBalance) (*PortfolioAnalysis, error) {
+func NewPortfolioAnalysis(nuetral_coin string, start_date time.Time, initial_balances *PortfolioBalance) (*PortfolioAnalysis, error) {
 
 	if nuetral_coin == "" {
 		return nil, errors.New("cannot create PortfolioAnalysis with empty nuetral coin")
@@ -60,6 +82,8 @@ func NewPortfolioAnalysis(nuetral_coin string, initial_balances *PortfolioBalanc
 
 	return &PortfolioAnalysis{
 		NuetralCoin:     nuetral_coin,
+		StartDate:       start_date,
+		CurrentDate:     start_date,
 		InitialBalances: initial_balances,
 		CurrentBalances: initial_balances,
 	}, nil

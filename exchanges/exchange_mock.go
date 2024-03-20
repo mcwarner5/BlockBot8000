@@ -77,15 +77,25 @@ func (wrapper *ExchangeWrapperSimulator) Name() string {
 	return "simulator"
 }
 
+func (wrapper *ExchangeWrapperSimulator) GetCurrDate() time.Time {
+	return *wrapper.currDate
+}
+
 func (wrapper *ExchangeWrapperSimulator) IncrementCurrDate() error {
 	//logrus.Info("End of Interval:" + wrapper.currDate.String())
 	var interval_len = time.Duration(wrapper.interval) * time.Minute
 	*wrapper.currDate = wrapper.currDate.Add(interval_len)
 
 	if wrapper.currDate.After(wrapper.endDate) {
+		diff_duration := wrapper.currDate.Sub(*wrapper.startDate)
+		iterations := decimal.NewFromFloat(diff_duration.Minutes()).DivRound(decimal.NewFromInt(int64(wrapper.interval)), 2)
+		diff_days := decimal.NewFromFloat(diff_duration.Hours()).DivRound(decimal.NewFromInt(24), 3)
+
 		end_str := fmt.Sprintln("End of Simulation")
 		end_str += "Simulation Start Date:" + wrapper.startDate.String() + "\n"
 		end_str += "Simulation End Date:" + wrapper.currDate.String() + "\n"
+		end_str += "Simulation Iterations:" + iterations.String() + "\n"
+		end_str += "Simulation Days:" + diff_days.String() + "\n"
 		logrus.Info(end_str)
 		return errors.New("End of Simulation Date has been reached")
 	}

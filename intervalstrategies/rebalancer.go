@@ -85,8 +85,10 @@ func (is RebalancerStrategy) String() string {
 	rbs_str += fmt.Sprintln("StaticCoin: " + is.StaticCoin)
 	rbs_str += fmt.Sprintln("NuetralCoin: " + is.NuetralCoin)
 	rbs_str += fmt.Sprintln("PortfolioDistribution:")
+	rbs_str += fmt.Sprintln(" COIN\t\t| PF%")
 	for coin, value := range is.PortfolioDistribution {
-		rbs_str += "\t" + fmt.Sprintf(`%s, %s%%`, coin, value.Mul(hundo).String()) + "\n"
+		rbs_str += coin + ternary.If(len(coin) > 5, "\t", "\t\t") + "| "
+		rbs_str += " " + fmt.Sprintf(`%s%%`, value.Mul(hundo).String()) + "\n"
 	}
 	rbs_str += is.Portfolio.String()
 	return rbs_str
@@ -150,7 +152,12 @@ func (is RebalancerStrategy) Setup(wrappers []exchanges.ExchangeWrapper, markets
 		return is, err
 	}
 
-	new_portfolio, err := strat.NewPortfolioAnalysis(is.NuetralCoin, initial_balances)
+	currTime := time.Now()
+	if wrappers[0].Name() == "simulator" {
+		currTime = wrappers[0].(*exchanges.ExchangeWrapperSimulator).GetCurrDate()
+	}
+
+	new_portfolio, err := strat.NewPortfolioAnalysis(is.NuetralCoin, currTime, initial_balances)
 
 	if err != nil {
 		return is, err
@@ -170,6 +177,15 @@ func (is RebalancerStrategy) OnError(err error) {
 func (is RebalancerStrategy) TearDown(wrappers []exchanges.ExchangeWrapper, markets []*environment.Market) (strat.Strategy, error) {
 	logrus.Info(fmt.Sprintln("RebalancerStrategy TearDown"))
 	tradeBook, err := wrappers[0].GetAllTrades(markets)
+	if err != nil {
+		return is, err
+	}
+	currTime := time.Now()
+	if wrappers[0].Name() == "simulator" {
+		currTime = wrappers[0].(*exchanges.ExchangeWrapperSimulator).GetCurrDate()
+	}
+
+	is.Portfolio, err = is.Portfolio.SetCurrDate(currTime)
 	if err != nil {
 		return is, err
 	}
@@ -375,8 +391,6 @@ func (is RebalancerStrategy) GetSellList(availible_to_sell map[string]decimal.De
 		}
 
 		if curr_percent.GreaterThan(upper_bounds) {
-			excess = excess.Add(curr_difference)
-
 			if curr_coin.Value.LessThan(is.MinimumTradeSize) {
 				continue
 			}
@@ -386,6 +400,7 @@ func (is RebalancerStrategy) GetSellList(availible_to_sell map[string]decimal.De
 			}
 			pair, _ := strat.NewCoinPercetPair(curr_coin.Key, aval_percet)
 			initial_sell_list = append(initial_sell_list, pair)
+			excess = excess.Add(aval_percet)
 			continue
 		} else if curr_percent.LessThan(lower_bounds) {
 			debt = debt.Add(curr_difference.Abs())
@@ -399,7 +414,7 @@ func (is RebalancerStrategy) GetSellList(availible_to_sell map[string]decimal.De
 			}
 			pair, _ := strat.NewCoinPercetPair(curr_coin.Key, aval_percet)
 			potential_sell_list = append(potential_sell_list, pair)
-			total_above_expected = total_above_expected.Add(curr_difference)
+			total_above_expected = total_above_expected.Add(aval_percet)
 		} else if curr_difference.LessThan(decimal.Zero) {
 			total_below_expected = total_below_expected.Add(curr_difference.Abs())
 		}
