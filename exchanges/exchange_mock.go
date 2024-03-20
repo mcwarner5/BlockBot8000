@@ -82,11 +82,12 @@ func (wrapper *ExchangeWrapperSimulator) GetCurrDate() time.Time {
 }
 
 func (wrapper *ExchangeWrapperSimulator) IncrementCurrDate() error {
-	//logrus.Info("End of Interval:" + wrapper.currDate.String())
 	var interval_len = time.Duration(wrapper.interval) * time.Minute
 	*wrapper.currDate = wrapper.currDate.Add(interval_len)
 
 	if wrapper.currDate.After(wrapper.endDate) {
+		*wrapper.currDate = wrapper.currDate.Add(-interval_len)
+
 		diff_duration := wrapper.currDate.Sub(*wrapper.startDate)
 		iterations := decimal.NewFromFloat(diff_duration.Minutes()).DivRound(decimal.NewFromInt(int64(wrapper.interval)), 2)
 		diff_days := decimal.NewFromFloat(diff_duration.Hours()).DivRound(decimal.NewFromInt(24), 3)
