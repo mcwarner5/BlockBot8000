@@ -1,4 +1,4 @@
-<p align="center"><img src="https://res.cloudinary.com/saniales-github/image/upload/v1541856660/saniales/golang-crypto-trading-bot/logo.png" width="360"></p>
+<p align="center"><img src="https://lumiere-a.akamaihd.net/v1/images/bb-8-main_72775463.jpeg" width="360"></p>
 <p align="center">
   <a href="https://github.com/avelino/awesome-go#other-software"><img src="https://cdn.rawgit.com/sindresorhus/awesome/d7305f38d29fed78fa85652e3a63e154dd8e8829/media/badge.svg" alt="Listed on Awesome Go"></img></a>
   <a href="https://github.com/mcwarner5/BlockBot8000/actions"><img src="https://github.com/mcwarner5/BlockBot8000/workflows/Go%20Build/badge.svg?branch=develop" alt="Develop Branch Build Status"></img></a>
@@ -8,7 +8,7 @@
   <a href="https://goreportcard.com/report/github.com/mcwarner5/BlockBot8000"><img src="https://goreportcard.com/badge/github.com/mcwarner5/BlockBot8000" alt="Goreportcard" /></a>
 </p>
 
-# Golang Crypto Trading Bot
+# BlockBot8000
 
 A golang implementation of a console-based trading bot for cryptocurrency exchanges.
 
@@ -26,7 +26,6 @@ If you need to, you can create a strategy and bind it to the bot:
 import bot "github.com/mcwarner5/BlockBot8000/cmd"
 
 func main() {
-    bot.AddCustomStrategy(examples.MyStrategy)
     bot.Execute()
 }
 ```
@@ -39,80 +38,110 @@ If enabled, the bot will do paper trading, as it will execute fake orders in a s
 
 A Fake balance for each coin must be specified for each exchange if simulation mode is enabled.
 
+Get coinbase API Keys/Secrets at: coinbase.com/settings/api
+
 ## Supported Exchanges
 
-| Exchange Name | REST Supported    | Websocket Support |
-| ------------- |------------------ | ----------------- |
-| Bittrex       | Yes               | No                |
-| Poloniex      | Yes               | Yes               |
-| Kraken        | Yes (no withdraw) | No                |
-| Bitfinex      | Yes               | Yes               |
-| Binance       | Yes               | Yes               |
-| Kucoin        | Yes               | No                |
-| HitBtc        | Yes               | Yes               |
+| Exchange Name | REST Supported    | Websocket Support | API Keys Website                |
+| ------------- |------------------ | ----------------- | ------------------------------- |
+| Bittrex       | Yes               | No                |                                 |
+| Poloniex      | Yes               | Yes               |                                 |
+| Kraken        | Yes (recommneded) | No                | pro.kraken.com/app/settings/api |
+| Bitfinex      | Yes               | Yes               |                                 |
+| Binance       | Yes               | Yes               |                                 |
+| Kucoin        | Yes               | No                |                                 |
+| HitBtc        | Yes               | Yes               |                                 |
 
 ## Configuration file template
 
 Create a configuration file from this example or run the `init` command of the compiled executable.
 
 ``` yaml
-simulation_mode: true # if you want to enable simulation mode.
+simulation_configs:
+  enabled: true
+  start_date: '2023-01-01'
+  end_date: '2024-03-15'
+  public_key: ''
+  secret_key: ''
+  interval: 1440
+  fake_balances:
+    btc: 0.0
+    eth: 50.0
+    link: 0.0
+    avax: 0.0
+    sol: 0.0
+    dot: 0.0
+    ada: 0.0
+    matic: 0.0
+    algo: 0.0
+    atom: 0.0
+    usdt: 0.0
 exchange_configs:
-  - exchange: bitfinex
-    public_key: bitfinex_public_key
-    secret_key: bitfinex_secret_key
+  - exchange: kraken
+    public_key: 
+    secret_key: 
     deposit_addresses:
-      BTC: bitfinex_deposit_address_btc
-      ETH: bitfinex_deposit_address_eth
-      ZEC: bitfinex_deposit_address_zec
-    fake_balances: # used only if simulation mode is enabled, can be omitted if not enabled.
-      BTC: 100
-      ETH: 100
-      ZEC: 100
-      ETC: 100
-  - exchange: hitbtc
-    public_key: hitbtc_public_key
-    secret_key: hitbtc_secret_key
-    deposit_addresses:
-      BTC : hitbtc_deposit_address_btc
-      ETH: hitbtc_deposit_address_eth
-      ZEC: hitbtc_deposit_address_zec
-    fake_balances:
-      BTC: 100
-      ETH: 100
-      ZEC: 100
-      ETC: 100
+      'BTC': BTC_wallet
+      'ETH': ETH_wallet
+      'SOL': SOL_wallet
+      'DOT': DOT_wallet
+      'ADA': ADA_wallet
+      'XYZ': XYZ_wallet
+      'EOS': EOS_wallet
+      'ATOM': ATOM_wallet
+      'XLM': XLM_wallet
 strategies:
-  - strategy: strategy_name
+  - strategy: RebalancerStrategy
+    spec:
+      name: MyFirstRebalancer
+      interval: 1440
+      allowance_threshold: 0.25
+      market_cap_multiplier: 1.25
+      min_trade_size: 0.0075
+      static_coin: usdt
+      nuetral_coin: eth
+      portfolio_ratio_percent: 
+        eth: 0.3
+        dot: 0.125
+        link: 0.125
+        sol: 0.2
+        ada: 0.2
+        usdt: 0.05
     markets:
-      - market: ETH-BTC
+      - market: eth-usdt
         bindings:
-        - exchange: bitfinex
-          market_name: ETHBTC
-        - exchange: hitbtc
-          market_name: ETHBTC
-      - market: ZEC-BTC
+        - exchange: kraken
+          market_name: ETHUSDT
+        - exchange: simulator
+          market_name: "ETH-USDC"
+      - market: sol-usdt
         bindings:
-        - exchange: bitfinex
-          market_name: ZECBTC
-        - exchange: hitbtc
-          market_name: ZECBTC
-      - market: ETC-BTC
+        - exchange: kraken
+          market_name: SOLUSDT
+        - exchange: simulator
+          market_name: "SOL-USDC"
+      - market: link-usdt
         bindings:
-        - exchange: bitfinex
-          market_name: ETCBTC
-        - exchange: hitbtc
-          market_name: ETCBTC
+        - exchange: kraken
+          market_name: LINKUSDT
+        - exchange: simulator
+          market_name: "LINK-USDC"
+      - market:  dot-usdt
+        bindings:
+        - exchange: kraken
+          market_name: DOTUSDT
+        - exchange: simulator
+          market_name: "DOT-USDC"
+      - market: ada-usdt
+        bindings:
+        - exchange: kraken
+          market_name: ADAUSDT
+        - exchange: simulator
+          market_name: "ADA-USDC"          
+      - market: usdt-usd
+        bindings:
+        - exchange: kraken
+          market_name: USDTZUSD
+        - exchange: simulator
+          market_name: "USDT-USD"
 ```
-
-## Donate
-
-Feel free to donate:
-
-| METHOD  | ADDRESS                                     |
-|-------- |-------------------------------------------- |
-| Paypal  | https://paypal.me/AlessandroSanino          |
-| BTC     | 1DVgmv6jkUiGrnuEv1swdGRyhQsZjX9MT3          |
-| XVG     | DFstPiWFXjX8UCyUCxfeVpk6JkgaLBSNvS          |
-| ETH     | 0x2fe7bd8a41e91e9284aada0055dbb15ecececf02  |
-| USDT    | 18obCEVmbT6MHXDcPoFwnUuCmkttLbK5Xo          |
