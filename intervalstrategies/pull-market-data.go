@@ -16,11 +16,10 @@
 package intervalstrategies
 
 import (
-	"fmt"
-
 	"github.com/mcwarner5/BlockBot8000/environment"
 	"github.com/mcwarner5/BlockBot8000/exchanges"
 	"github.com/mcwarner5/BlockBot8000/strategies"
+	"github.com/sirupsen/logrus"
 )
 
 type PullMarketData struct {
@@ -39,7 +38,7 @@ func NewPullMarketData(raw_strat environment.StrategyConfig) strategies.Strategy
 }
 
 func (is PullMarketData) Setup(wrappers []exchanges.ExchangeWrapper, markets []*environment.Market) (strategies.Strategy, error) {
-	fmt.Println("PullMarketData starting")
+	logrus.Info("PullMarketData starting")
 	return is, nil
 }
 
@@ -67,10 +66,10 @@ func (is PullMarketData) OnUpdate(wrappers []exchanges.ExchangeWrapper, markets 
 }
 
 func (is PullMarketData) OnError(err error) {
-	fmt.Println(err)
+	logrus.Info(err)
 }
 
 func (is PullMarketData) TearDown(wrappers []exchanges.ExchangeWrapper, markets []*environment.Market) (strategies.Strategy, error) {
-	fmt.Println("Watch1Min exited")
+	logrus.Info("Watch1Min exited")
 	return is, nil
 }

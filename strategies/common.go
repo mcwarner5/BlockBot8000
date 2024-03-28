@@ -22,6 +22,7 @@ import (
 
 	"github.com/mcwarner5/BlockBot8000/environment"
 	"github.com/mcwarner5/BlockBot8000/exchanges"
+	"github.com/sirupsen/logrus"
 )
 
 var available map[string]Strategy //mapped name -> strategy
@@ -66,7 +67,7 @@ func (is StrategyModel) String() string {
 // Apply executes Cyclically the On Update, basing on provided interval.
 
 func (is StrategyModel) Setup(wrappers []exchanges.ExchangeWrapper, markets []*environment.Market) (Strategy, error) {
-	fmt.Println("Base Setup")
+	logrus.Info("Base Setup")
 	return is, nil
 }
 
@@ -75,12 +76,12 @@ func (is StrategyModel) OnUpdate(wrappers []exchanges.ExchangeWrapper, markets [
 }
 
 func (is StrategyModel) OnError(err error) {
-	fmt.Println("Base OnError")
-	fmt.Println(err)
+	logrus.Info("Base OnError")
+	logrus.Error(err)
 }
 
 func (is StrategyModel) TearDown(wrappers []exchanges.ExchangeWrapper, markets []*environment.Market) (Strategy, error) {
-	fmt.Println("Base TearDown")
+	logrus.Info("Base TearDown")
 	return is, nil
 }
 

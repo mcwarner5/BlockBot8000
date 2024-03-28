@@ -35,7 +35,7 @@ func (is IntervalStrategy) String() string {
 }
 
 func (is IntervalStrategy) OnUpdate(wrappers []exchanges.ExchangeWrapper, markets []*environment.Market) (strategies.Strategy, error) {
-	//fmt.Println("OnUpdate " + is.String())
+	//logrus.Info("OnUpdate " + is.String())
 	if wrappers[0].Name() == "simulator" {
 		return is, nil
 	}

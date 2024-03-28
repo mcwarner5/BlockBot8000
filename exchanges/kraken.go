@@ -194,6 +194,14 @@ func (wrapper *KrakenWrapper) GetMarketSummary(market *environment.Market) (*env
 	}, nil
 }
 
+func (wrapper *KrakenWrapper) GetHistoricalCandles(market *environment.Market, start time.Time, end time.Time, interval int) ([]environment.CandleStick, error) {
+	panic("GetHistoricalCandles Not Implemented for Kraken")
+}
+
+func (wrapper *KrakenWrapper) GetHistoricalTrades(market *environment.Market, start time.Time, end time.Time) (*environment.TradeBook, error) {
+	panic("GetHistoricalTrades Not Implemented for Kraken")
+}
+
 // GetCandles gets the candle data from the exchange.
 func (wrapper *KrakenWrapper) GetCandles(market *environment.Market) ([]environment.CandleStick, error) {
 	if !wrapper.websocketOn {
@@ -341,4 +349,7 @@ func (wrapper *KrakenWrapper) subscribeMarketSummaryFeed(market *environment.Mar
 // Withdraw performs a withdraw operation from the exchange to a destination address.
 func (wrapper *KrakenWrapper) Withdraw(destinationAddress string, coinTicker string, amount float64) error {
 	panic("Not Supported")
+}
+func (wrapper *KrakenWrapper) IsHistoricalSimulation() bool {
+	return false
 }

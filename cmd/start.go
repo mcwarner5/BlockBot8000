@@ -16,7 +16,6 @@
 package bot
 
 import (
-	"fmt"
 	"reflect"
 	"strings"
 
@@ -26,6 +25,7 @@ import (
 	"github.com/mcwarner5/BlockBot8000/strategies"
 	"github.com/mitchellh/mapstructure"
 	"github.com/shopspring/decimal"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	viper "github.com/spf13/viper"
 )
@@ -86,27 +86,27 @@ func initConfigs() error {
 		return err
 	}
 
-	fmt.Println("DONE")
+	logrus.Info("DONE")
 
 	return nil
 }
 
 func executeStartCommand(cmd *cobra.Command, args []string) {
-	fmt.Print("Getting configurations ... ")
+	logrus.Info("Getting configurations ... ")
 	if err := initConfigs(); err != nil {
-		fmt.Println("Cannot read from configuration file, please create or replace the current one using gobot init")
+		logrus.Info("Cannot read from configuration file, please create or replace the current one using gobot init")
 		return
 	}
-	fmt.Println("DONE")
+	logrus.Info("DONE")
 
-	fmt.Print("Getting exchange info ... ")
+	logrus.Info("Getting exchange info ... ")
 	wrappers := make([]exchanges.ExchangeWrapper, len(botConfig.ExchangeConfigs))
 	for i, config := range botConfig.ExchangeConfigs {
 		wrappers[i] = helpers.InitExchange(config, botConfig.SimulationConfigs, config.DepositAddresses)
 	}
-	fmt.Println("DONE")
+	logrus.Info("DONE")
 
-	fmt.Print("Getting markets cold info ... ")
+	logrus.Info("Getting markets cold info ... ")
 	for _, strategyConf := range botConfig.Strategies {
 		mkts := make([]*environment.Market, len(strategyConf.Markets))
 		for i, mkt := range strategyConf.Markets {
@@ -126,14 +126,14 @@ func executeStartCommand(cmd *cobra.Command, args []string) {
 
 		err := strategies.MatchWithMarkets(strategies.AddCustomStrategy(helpers.InitStrategy(strategyConf)), mkts)
 		if err != nil {
-			fmt.Println("Cannot add tactic : ", err)
+			logrus.Info("Cannot add tactic : ", err)
 		}
 	}
-	fmt.Println("DONE")
+	logrus.Info("DONE")
 
-	fmt.Println("Starting bot ... ")
+	logrus.Info("Starting bot ... ")
 	executeBotLoop(wrappers)
-	fmt.Println("EXIT, good bye :)")
+	logrus.Info("EXIT, good bye :)")
 }
 
 func executeBotLoop(wrappers []exchanges.ExchangeWrapper) {

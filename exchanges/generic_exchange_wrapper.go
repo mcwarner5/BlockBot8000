@@ -17,6 +17,7 @@ package exchanges
 
 import (
 	"errors"
+	"time"
 
 	"github.com/mcwarner5/BlockBot8000/environment"
 	"github.com/shopspring/decimal"
@@ -24,8 +25,10 @@ import (
 
 // ExchangeWrapper provides a generic wrapper for exchange services.
 type ExchangeWrapper interface {
-	Name() string                                                                    // Gets the name of the exchange.
-	GetCandles(market *environment.Market) ([]environment.CandleStick, error)        // Gets the candle data from the exchange.
+	Name() string                                                                                                                     // Gets the name of the exchange.
+	GetCandles(market *environment.Market) ([]environment.CandleStick, error)                                                         // Gets the candle data from the exchange.
+	GetHistoricalCandles(market *environment.Market, start time.Time, end time.Time, interval int) ([]environment.CandleStick, error) // Gets the candle data from the exchange.
+	GetMarkets() ([]*environment.Market, error)
 	GetMarketSummary(market *environment.Market) (*environment.MarketSummary, error) // Gets the current market summary.
 	GetOrderBook(market *environment.Market) (*environment.OrderBook, error)         // Gets the order(ASK + BID) book of a market.
 
@@ -34,6 +37,7 @@ type ExchangeWrapper interface {
 	BuyMarket(market *environment.Market, amount float64) (string, error)                // Performs a market buy action.
 	SellMarket(market *environment.Market, amount float64) (string, error)               // Performs a market sell action.
 
+	GetHistoricalTrades(market *environment.Market, start time.Time, end time.Time) (*environment.TradeBook, error)
 	GetAllTrades(markets []*environment.Market) (*environment.TradeBook, error)
 	GetAllMarketTrades(market *environment.Market) (*environment.TradeBook, error)
 	GetFilteredTrades(market *environment.Market, symbol string, tradeSide environment.TradeSide, tradeType environment.TradeType, tradeStatus environment.TradeStatus) (*environment.TradeBook, error)
@@ -48,6 +52,7 @@ type ExchangeWrapper interface {
 	Withdraw(destinationAddress string, coinTicker string, amount float64) error // Performs a withdraw operation from the exchange to a destination address.
 
 	String() string // Returns a string representation of the object.
+	IsHistoricalSimulation() bool
 }
 
 // ErrWebsocketNotSupported is the error representing when an exchange does not support websocket.

@@ -20,6 +20,7 @@ import (
 	"os"
 	"os/signal"
 
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
@@ -52,8 +53,8 @@ func init() {
 	go func() {
 		<-signals
 		signal.Stop(signals)
-		fmt.Println()
-		fmt.Println("CTRL-C command received. Exiting...")
+		logrus.Infoln()
+		logrus.Infoln("CTRL-C command received. Exiting...")
 		os.Exit(0)
 	}()
 
@@ -65,7 +66,7 @@ func init() {
 
 func executeRootCommand(cmd *cobra.Command, args []string) {
 	if rootFlags.Version {
-		fmt.Printf("Golang Crypto Trading Bot v. %s\n", versionNumber)
+		logrus.Infof("Golang Crypto Trading Bot v. %s\n", versionNumber)
 	} else {
 		cmd.Help()
 	}

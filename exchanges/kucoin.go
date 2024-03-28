@@ -19,6 +19,7 @@ package exchanges
 import (
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/fiore/kucoin-go"
 	"github.com/fiore/kucoin-go/websocket"
@@ -251,6 +252,13 @@ func (wrapper *KucoinWrapper) CalculateWithdrawFees(market *environment.Market, 
 	panic("Not Implemented")
 }
 
+func (wrapper *KucoinWrapper) GetHistoricalTrades(market *environment.Market, start time.Time, end time.Time) (*environment.TradeBook, error) {
+	panic("Not Implemented")
+}
+func (wrapper *KucoinWrapper) GetHistoricalCandles(market *environment.Market, start time.Time, end time.Time, interval int) ([]environment.CandleStick, error) {
+	panic("Not Implemented")
+}
+
 // GetCandles gets the candle data from the exchange.
 func (wrapper *KucoinWrapper) GetCandles(market *environment.Market) ([]environment.CandleStick, error) {
 	panic("Not Implemented")
@@ -274,4 +282,8 @@ func (wrapper *KucoinWrapper) Withdraw(destinationAddress string, coinTicker str
 	}
 
 	return nil
+}
+
+func (wrapper *KucoinWrapper) IsHistoricalSimulation() bool {
+	return false
 }

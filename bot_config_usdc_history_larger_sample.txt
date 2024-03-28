@@ -1,0 +1,122 @@
+simulation_configs:
+  enabled: true
+  start_date: '2023-01-01'
+  end_date: '2024-03-25'
+  public_key: ''
+  secret_key: ''
+  interval: 120
+  fake_balances:
+    btc: 0.0
+    eth:  50.0
+    link:  0.0
+    avax: 0.0
+    sol:  0.0
+    dot:  0.0
+    ada:  0.0
+    matic: 0.0
+    algo: 0.0
+    atom: 0.0
+    usdt: 0.0
+exchange_configs:
+  - exchange: kraken
+    public_key: 
+    secret_key: 
+    deposit_addresses:
+      'BTC': BTC_wallet
+      'ETH': ETH_wallet
+      'SOL': SOL_wallet
+      'DOT': DOT_wallet
+      'ADA': ADA_wallet
+      'XYZ': XYZ_wallet
+      'EOS': EOS_wallet
+      'ATOM': ATOM_wallet
+      'XLM': XLM_wallet
+strategies:
+  - strategy: RebalancerStrategy
+    spec:
+      name: MyFirstRebalancer
+      interval: 120
+      allowance_threshold: 0.20
+      market_cap_multiplier: 1.25
+      min_trade_size: 0.01
+      static_coin: usdt
+      nuetral_coin: eth
+      portfolio_ratio_percent: 
+        eth: 0.1
+        dot: 0.1
+        link: 0.1
+        avax: 0.1
+        atom: 0.1
+        matic: 0.1
+        algo: 0.1
+        orca: 0.05
+        sol: 0.1
+        ada: 0.1
+        usdt: 0.05
+    markets:
+      - market: eth-usdt
+        bindings:
+        - exchange: kraken
+          market_name: ETHUSDT
+        - exchange: simulator
+          market_name: "ETH-USDC"
+      - market: sol-usdt
+        bindings:
+        - exchange: kraken
+          market_name: SOLUSDT
+        - exchange: simulator
+          market_name: "SOL-USDC"
+      - market: link-usdt
+        bindings:
+        - exchange: kraken
+          market_name: LINKUSDT
+        - exchange: simulator
+          market_name: "LINK-USDC"
+      - market:  dot-usdt
+        bindings:
+        - exchange: kraken
+          market_name: 	DOTUSDT
+        - exchange: simulator
+          market_name: "DOT-USDC"
+      - market: ada-usdt
+        bindings:
+        - exchange: kraken
+          market_name: ADAUSDT
+        - exchange: simulator
+          market_name: "ADA-USDC"
+      - market: orca-usdt
+        bindings:
+        - exchange: kraken
+          market_name: ORCAUSDT
+        - exchange: simulator
+          market_name: "ORCA-USDC"
+      - market: algo-usdt
+        bindings:
+        - exchange: kraken
+          market_name: ALGOUSDT
+        - exchange: simulator
+          market_name: "ALGO-USDC"
+      - market: matic-usdt
+        bindings:
+        - exchange: kraken
+          market_name: MATICUSDT
+        - exchange: simulator
+          market_name: "MATIC-USDC"
+      - market: atom-usdt
+        bindings:
+        - exchange: kraken
+          market_name: ATOMUSDT
+        - exchange: simulator
+          market_name: "ATOM-USDC"
+      - market: avax-usdt
+        bindings:
+        - exchange: kraken
+          market_name: AVAXUSDT
+        - exchange: simulator
+          market_name: "AVAX-USDC"
+      - market: usdt-usd
+        bindings:
+        - exchange: kraken
+          market_name: USDTZUSD
+        - exchange: simulator
+          market_name: "USDT-USD"

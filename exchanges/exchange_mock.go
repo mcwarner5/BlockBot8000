@@ -1,69 +1,64 @@
 package exchanges
 
 import (
-	"context"
 	"fmt"
-	"sort"
-	"strconv"
 	"time"
 
 	"github.com/gofrs/uuid"
 	"github.com/juju/errors"
 	"github.com/mcwarner5/BlockBot8000/environment"
-	"github.com/mcwarner5/BlockBot8000/libraries/coinbase-adv/client"
 	"github.com/shopspring/decimal"
 	"github.com/sirupsen/logrus"
 )
 
-var CoinbaseMaxLimit int = 300
-
 // ExchangeWrapperSimulator wraps another wrapper and returns simulated balances and orders.
 type ExchangeWrapperSimulator struct {
-	innerWrapper ExchangeWrapper
-	candles      *MappedCandlesCache
-	orders       *MappedOrdersCache
-	trades       *TradeBookbookCache
-	coinbase     client.CoinbaseClient
-	balances     map[string]decimal.Decimal
-	interval     int
-	startDate    *time.Time
-	endDate      time.Time
-	currDate     *time.Time
+	innerWrapper         ExchangeWrapper
+	candles              *MappedCandlesCache
+	orders               *MappedOrdersCache
+	trades               *TradeBookbookCache
+	balances             map[string]decimal.Decimal
+	historicalSimulation bool
+	interval             int
+	startDate            *time.Time
+	endDate              *time.Time
+	currDate             *time.Time
 }
 
 // NewExchangeWrapperSimulator creates a new simulated wrapper from another wrapper and an initial balance.
 func NewExchangeWrapperSimulator(mockedWrapper ExchangeWrapper, simConfigs environment.SimulationConfig) *ExchangeWrapperSimulator {
 
-	start_date, err := time.Parse(time.DateOnly, simConfigs.SimStartDate)
-	curr_date, _ := time.Parse(time.DateOnly, simConfigs.SimStartDate)
+	var start_date, curr_date, end_date time.Time
+	var err error
+	var historical bool = false
 
-	if err != nil {
-		panic("no start date")
-	}
+	if simConfigs.SimStartDate != "" && simConfigs.SimEndDate != "" {
+		historical = true
+		start_date, err = time.Parse(time.DateOnly, simConfigs.SimStartDate)
+		curr_date, _ = time.Parse(time.DateOnly, simConfigs.SimStartDate)
 
-	end_date, err := time.Parse(time.DateOnly, simConfigs.SimEndDate)
+		if err != nil {
+			panic("no start date")
+		}
 
-	if err != nil {
-		panic("no end date")
-	}
+		end_date, err = time.Parse(time.DateOnly, simConfigs.SimEndDate)
 
-	creds := client.Credentials{
-		ApiKey:      simConfigs.SimPublicKey,
-		ApiSKey:     simConfigs.SimSecretKey,
-		AccessToken: "",
+		if err != nil {
+			panic("no end date")
+		}
 	}
 
 	return &ExchangeWrapperSimulator{
-		innerWrapper: mockedWrapper,
-		candles:      NewMappedCandlesCache(),
-		orders:       NewMappedOrdersCache(),
-		trades:       NewTradeBookbookCache(),
-		coinbase:     client.NewClient(&creds),
-		balances:     simConfigs.SimFakeBalances,
-		interval:     simConfigs.SimInterval,
-		startDate:    &start_date,
-		endDate:      end_date,
-		currDate:     &curr_date,
+		innerWrapper:         mockedWrapper,
+		candles:              NewMappedCandlesCache(),
+		orders:               NewMappedOrdersCache(),
+		trades:               NewTradeBookbookCache(),
+		balances:             simConfigs.SimFakeBalances,
+		historicalSimulation: historical,
+		interval:             simConfigs.SimInterval,
+		startDate:            &start_date,
+		endDate:              &end_date,
+		currDate:             &curr_date,
 	}
 }
 
@@ -77,6 +72,10 @@ func (wrapper *ExchangeWrapperSimulator) Name() string {
 	return "simulator"
 }
 
+func (wrapper *ExchangeWrapperSimulator) IsHistoricalSimulation() bool {
+	return wrapper.historicalSimulation
+}
+
 func (wrapper *ExchangeWrapperSimulator) GetCurrDate() time.Time {
 	return *wrapper.currDate
 }
@@ -85,7 +84,7 @@ func (wrapper *ExchangeWrapperSimulator) IncrementCurrDate() error {
 	var interval_len = time.Duration(wrapper.interval) * time.Minute
 	*wrapper.currDate = wrapper.currDate.Add(interval_len)
 
-	if wrapper.currDate.After(wrapper.endDate) {
+	if wrapper.currDate.After(*wrapper.endDate) {
 		*wrapper.currDate = wrapper.currDate.Add(-interval_len)
 
 		diff_duration := wrapper.currDate.Sub(*wrapper.startDate)
@@ -106,85 +105,67 @@ func (wrapper *ExchangeWrapperSimulator) IncrementCurrDate() error {
 
 // GetCandles gets the candle data from the exchange.
 func (wrapper *ExchangeWrapperSimulator) UpdateMappedCandles(market *environment.Market, from_time time.Time) (*environment.CandleStick, error) {
-	ctx := context.Background()
+
 	one_interval := time.Duration(wrapper.interval) * time.Minute
 	api_call_len := time.Duration(wrapper.interval*300) * time.Minute
 	api_end_date := from_time.Add(-one_interval + api_call_len)
-	api_end_date_key := fmt.Sprint(api_end_date.Unix())
 	api_start_date := from_time.Add(-one_interval)
-	api_start_date_key := fmt.Sprint(api_start_date.Unix())
-	//from_time_key := fmt.Sprint(from_time.Unix())
 
-	var params = client.ListProductsCandlesParams{
-		Product:   MarketNameFor(market, wrapper),
-		StartTime: api_start_date_key,
-		EndTime:   api_end_date_key,
-		Interval:  wrapper.interval,
+	historicalCandles, err := wrapper.GetHistoricalCandles(market, api_start_date, api_end_date, wrapper.interval)
+	if err != nil {
+		return nil, err
 	}
-	response, _ := wrapper.coinbase.GetProductCandles(ctx, &params)
-	new_map := NewSizedCandleMap(len(response.CandleSticks))
-	candles := response.GetCandleSticks()
-
-	sort.Slice(candles, func(i, j int) bool {
-		m_t_u_str, _ := strconv.ParseInt(*candles[i].Start, 10, 64)
-		o_t_u_str, _ := strconv.ParseInt(*candles[j].Start, 10, 64)
-		m_t := time.Unix(m_t_u_str, 0).UTC()
-		o_t := time.Unix(o_t_u_str, 0).UTC()
-		return m_t.Before(o_t)
-	})
 
 	var prev_candle *environment.CandleStick
 	pot_prev_candle, isSet := wrapper.candles.GetTime(market, from_time.Add(-one_interval))
 	if isSet {
 		prev_candle = pot_prev_candle
 	}
+	new_map := NewSizedCandleMap(len(historicalCandles))
 
 	next_fill_time := from_time
-	for i := 0; i < len(candles); i++ {
-		candle := candles[i]
-		c_time_u_num, _ := strconv.ParseInt(*candle.Start, 10, 64)
-		c_time := time.Unix(c_time_u_num, 0).UTC()
-		c_time_key := fmt.Sprint(c_time.Unix())
-		c_high, _ := decimal.NewFromString(*candle.High)
-		c_open, _ := decimal.NewFromString(*candle.Open)
-		c_low, _ := decimal.NewFromString(*candle.Low)
-		c_close, _ := decimal.NewFromString(*candle.Close)
-		c_volume, _ := decimal.NewFromString(*candle.Volume)
+	for i := 0; i < len(historicalCandles); i++ {
+		candle := historicalCandles[i]
+		curr_time_key := fmt.Sprint(candle.CandleTime.Unix())
 
 		new_candle := environment.CandleStick{
-			High:       c_high,
-			Open:       c_open,
-			Close:      c_close,
-			Low:        c_low,
-			Volume:     c_volume,
-			CandleTime: c_time,
+			High:       candle.High,
+			Open:       candle.Open,
+			Close:      candle.Close,
+			Low:        candle.Low,
+			Volume:     candle.Volume,
+			CandleTime: candle.CandleTime,
 		}
 
-		if c_time.Equal(api_start_date) {
+		if candle.CandleTime.Equal(api_start_date) {
 			prev_candle = &new_candle
 			continue
 		}
 
-		if c_time.Equal(next_fill_time) {
+		if candle.CandleTime.Equal(next_fill_time) {
 			next_fill_time = next_fill_time.Add(one_interval)
-			new_map.TimeMap[c_time_key] = &new_candle
+			new_map.TimeMap[curr_time_key] = &new_candle
 			prev_candle = &new_candle
 			continue
 		}
 
-		if c_time.Before(next_fill_time) {
-			new_map.TimeMap[c_time_key] = &new_candle
+		if candle.CandleTime.Before(next_fill_time) {
+			new_map.TimeMap[curr_time_key] = &new_candle
 			prev_candle = &new_candle
 			continue
 		}
 
-		for c_time.After(next_fill_time) {
+		for candle.CandleTime.After(next_fill_time) {
+			var copy_candle environment.CandleStick
 			if prev_candle != nil {
-				copy_candle := *prev_candle
-				next_fill_time_str := fmt.Sprint(next_fill_time.Unix())
-				new_map.TimeMap[next_fill_time_str] = &copy_candle
-				next_fill_time = next_fill_time.Add(one_interval)
+				copy_candle = *prev_candle
+			} else {
+				copy_candle = new_candle
 			}
+			next_fill_time_str := fmt.Sprint(next_fill_time.Unix())
+			new_map.TimeMap[next_fill_time_str] = &copy_candle
+			next_fill_time = next_fill_time.Add(one_interval)
+
 		}
 	}
 
@@ -211,40 +192,29 @@ func (wrapper *ExchangeWrapperSimulator) GetCandle(market *environment.Market, t
 	return candle, nil
 }
 
+func (wrapper *ExchangeWrapperSimulator) GetHistoricalTrades(market *environment.Market, start time.Time, end time.Time) (*environment.TradeBook, error) {
+	return wrapper.innerWrapper.GetHistoricalTrades(market, start, end)
+}
+
+func (wrapper *ExchangeWrapperSimulator) GetHistoricalCandles(market *environment.Market, start time.Time, end time.Time, interval int) ([]environment.CandleStick, error) {
+	return wrapper.innerWrapper.GetHistoricalCandles(market, start, end, interval)
+}
+
 // GetCandles gets the candle data from the exchange.
 func (wrapper *ExchangeWrapperSimulator) GetCandles(market *environment.Market) ([]environment.CandleStick, error) {
 	return wrapper.innerWrapper.GetCandles(market)
 }
 
-func (wrapper *ExchangeWrapperSimulator) GetProducts() {
-	ctx := context.Background()
-	var start int32 = 1
-
-	for i := start; i < 4; i++ {
-		var params = client.ListProductsParams{
-			Limit:  int32(CoinbaseMaxLimit),
-			Offset: int32(CoinbaseMaxLimit) * (i - 1),
-			//ProductType: "SPOT",
-		}
-
-		res_products, err := wrapper.coinbase.ListProducts(ctx, &params)
-		if err != nil {
-			return
-		}
-
-		var products string
-		for _, product := range res_products.Products {
-			products = products + fmt.Sprintf("%s \t", *product.ProductId)
-		}
-
-		logrus.Info(products)
-		var sleep_len = time.Duration(1) * time.Second
-		time.Sleep(sleep_len)
-	}
+func (wrapper *ExchangeWrapperSimulator) GetMarkets() ([]*environment.Market, error) {
+	return wrapper.innerWrapper.GetMarkets()
 }
 
 // GetMarketSummary gets the current market summary.
 func (wrapper *ExchangeWrapperSimulator) GetMarketSummary(market *environment.Market) (*environment.MarketSummary, error) {
+	if !wrapper.historicalSimulation {
+		return wrapper.innerWrapper.GetMarketSummary(market)
+	}
+
 	var c_time *time.Time = &time.Time{}
 	*c_time = *wrapper.currDate
 
@@ -265,19 +235,13 @@ func (wrapper *ExchangeWrapperSimulator) GetMarketSummary(market *environment.Ma
 }
 
 func (wrapper *ExchangeWrapperSimulator) UpdateMappedOrders(market *environment.Market, from_time time.Time) (*environment.OrderBook, error) {
-	ctx := context.Background()
-	//var to_include_first = time.Duration(wrapper.interval) * time.Minute
-	//var api_call_len = time.Duration(wrapper.interval*300) * time.Minute
 	var thirty_min = time.Duration(60) * time.Minute
-
 	var api_end_date = from_time.Add(thirty_min)
 
-	var params = client.ListProductsTickerHistoryParams{
-		ProductId: MarketNameFor(market, wrapper),
-		StartTime: from_time,
-		EndTime:   api_end_date,
+	trades, err := wrapper.GetHistoricalTrades(market, from_time, api_end_date)
+	if err != nil {
+		return nil, err
 	}
-	response, _ := wrapper.coinbase.ListProductsTickerHistory(ctx, &params)
 
 	new_map := OrderBookMap{TimeMap: make(map[string]*environment.OrderBook)}
 	curr_map_time := from_time
@@ -285,30 +249,26 @@ func (wrapper *ExchangeWrapperSimulator) UpdateMappedOrders(market *environment.
 	var c_asks []environment.Order = make([]environment.Order, 0)
 	var c_bids []environment.Order = make([]environment.Order, 0)
 
-	for i := len(response.Trades) - 1; i >= 0; i-- {
-		curr_trade := response.Trades[i]
-		trade_time, err := time.Parse(time.RFC3339, *curr_trade.Time)
-		if err != nil {
-			return nil, err
-		}
+	for i := len(trades.Trades) - 1; i >= 0; i-- {
+		curr_trade := trades.Trades[i]
 
-		if trade_time.Before(curr_map_time) {
+		if curr_trade.Timestamp.Before(curr_map_time) {
 			continue
 		}
 
-		if trade_time.After(curr_map_time) {
+		if curr_trade.Timestamp.After(curr_map_time) {
 			new_order := environment.Order{
-				Value:       decimal.NewFromFloat(*curr_trade.Price), //Value of the trade : e.g. in a BTC ETH is the value of a single ETH in BTC.
-				Quantity:    decimal.NewFromFloat(*curr_trade.Size),  //Quantity of Coins of this order.
-				OrderNumber: *curr_trade.TradeId,                     //[optional] Order number as seen in echange archives.
-				Timestamp:   trade_time,
+				Value:       curr_trade.Price,
+				Quantity:    curr_trade.FillQuantity,
+				OrderNumber: curr_trade.TradeNumber,
+				Timestamp:   curr_trade.Timestamp,
 			}
 
-			if *curr_trade.Side == "BUY" {
+			if curr_trade.Side == environment.Buy {
 				c_asks = append(c_asks, new_order)
 			}
 
-			if *curr_trade.Side == "SELL" {
+			if curr_trade.Side == environment.Sell {
 				c_bids = append(c_bids, new_order)
 			}
 			continue
@@ -335,6 +295,10 @@ func (wrapper *ExchangeWrapperSimulator) UpdateMappedOrders(market *environment.
 
 // GetOrderBook gets the order(ASK + BID) book of a market.
 func (wrapper *ExchangeWrapperSimulator) GetOrderBook(market *environment.Market) (*environment.OrderBook, error) {
+	if !wrapper.historicalSimulation {
+		return wrapper.innerWrapper.GetOrderBook(market)
+	}
+
 	order, isSet := wrapper.orders.GetTime(market, *wrapper.currDate)
 
 	if !isSet {

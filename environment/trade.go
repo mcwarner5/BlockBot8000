@@ -1,7 +1,9 @@
 package environment
 
 import (
+	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/shopspring/decimal"
@@ -44,6 +46,17 @@ const (
 	Buy  TradeSide = iota
 	Sell TradeSide = iota
 )
+
+func TradeSideFromString(s string) (TradeSide, error) {
+	switch strings.ToUpper(s) {
+	case "BUY":
+		return Buy, nil
+	case "SELL":
+		return Sell, nil
+	default:
+		return -1, errors.New("invalid TradeSide")
+	}
+}
 
 func (w TradeSide) String() string {
 	return [...]string{"Buy", "Sell"}[w]

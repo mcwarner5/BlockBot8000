@@ -67,17 +67,14 @@ type MarketConfig struct {
 
 // ExchangeBindingsConfig represents the binding of market names between bot notation and exchange ticker.
 type ExchangeBindingsConfig struct {
-	Name          string `mapstructure:"exchange"`    // Represents the name of the exchange.
-	MarketName    string `mapstructure:"market_name"` // Represents the name of the market as seen from the exchange.
-	SimMarketName string `mapstructure:"sim_market_name"`
+	Name       string `mapstructure:"exchange"`    // Represents the name of the exchange.
+	MarketName string `mapstructure:"market_name"` // Represents the name of the market as seen from the exchange.
 }
 
 type SimulationConfig struct {
 	SimModeOn       bool                       `mapstructure:"enabled"` // if true, do not create real orders and do not get real balance
 	SimStartDate    string                     `mapstructure:"start_date"`
 	SimEndDate      string                     `mapstructure:"end_date"`
-	SimPublicKey    string                     `mapstructure:"public_key"` // Represents the public key used to connect to Exchange API.
-	SimSecretKey    string                     `mapstructure:"secret_key"`
 	SimInterval     int                        `mapstructure:"interval"`
 	SimFakeBalances map[string]decimal.Decimal `mapstructure:"fake_balances"` // Used only in simulation mode, fake starting balance [coin:balance].
 }

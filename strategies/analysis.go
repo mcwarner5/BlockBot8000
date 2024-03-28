@@ -89,6 +89,13 @@ func NewPortfolioAnalysis(nuetral_coin string, start_date time.Time, initial_bal
 	}, nil
 }
 
+func (is *PortfolioAnalysis) GetCurrDiffInValue(start *PortfolioBalance, end *PortfolioBalance) (decimal.Decimal, error) {
+	init_val := start.GetTotal()
+	end_val := end.GetTotal()
+
+	return end_val.Sub(init_val), nil
+}
+
 func (is *PortfolioAnalysis) GetCurrDiffInNuetralCoin(start *PortfolioBalance, end *PortfolioBalance) (decimal.Decimal, error) {
 	init_val, err := start.GetTotalValueInCoin(is.NuetralCoin)
 	if err != nil {
