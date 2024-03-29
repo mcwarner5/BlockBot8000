@@ -116,7 +116,7 @@ type Trade struct {
 	Price        decimal.Decimal //Value of the trade : e.g. in a BTC ETH is the value of a single ETH in BTC.
 	AskQuantity  decimal.Decimal
 	FillQuantity decimal.Decimal //Quantity of Coins of this order.
-	Fees         decimal.Decimal
+	Fees         decimal.Decimal //Fees paid in static coin base
 	Market       string
 	Side         TradeSide
 	Status       TradeStatus

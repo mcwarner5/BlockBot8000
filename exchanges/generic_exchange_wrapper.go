@@ -32,24 +32,24 @@ type ExchangeWrapper interface {
 	GetMarketSummary(market *environment.Market) (*environment.MarketSummary, error) // Gets the current market summary.
 	GetOrderBook(market *environment.Market) (*environment.OrderBook, error)         // Gets the order(ASK + BID) book of a market.
 
-	BuyLimit(market *environment.Market, amount float64, limit float64) (string, error)  // Performs a limit buy action.
-	SellLimit(market *environment.Market, amount float64, limit float64) (string, error) // Performs a limit sell action.
-	BuyMarket(market *environment.Market, amount float64) (string, error)                // Performs a market buy action.
-	SellMarket(market *environment.Market, amount float64) (string, error)               // Performs a market sell action.
+	BuyLimit(market *environment.Market, amount decimal.Decimal, limit decimal.Decimal) (string, error)  // Performs a limit buy action.
+	SellLimit(market *environment.Market, amount decimal.Decimal, limit decimal.Decimal) (string, error) // Performs a limit sell action.
+	BuyMarket(market *environment.Market, amount decimal.Decimal) (string, error)                        // Performs a market buy action.
+	SellMarket(market *environment.Market, amount decimal.Decimal) (string, error)                       // Performs a market sell action.
 
 	GetHistoricalTrades(market *environment.Market, start time.Time, end time.Time) (*environment.TradeBook, error)
 	GetAllTrades(markets []*environment.Market) (*environment.TradeBook, error)
 	GetAllMarketTrades(market *environment.Market) (*environment.TradeBook, error)
 	GetFilteredTrades(market *environment.Market, symbol string, tradeSide environment.TradeSide, tradeType environment.TradeType, tradeStatus environment.TradeStatus) (*environment.TradeBook, error)
-	CalculateTradingFees(market *environment.Market, amount float64, limit float64, orderSide environment.TradeSide) float64 // Calculates the trading fees for an order on a specified market.
-	CalculateWithdrawFees(market *environment.Market, amount float64) float64                                                // Calculates the withdrawal fees on a specified market.
+	CalculateTradingFees(market *environment.Market, amount decimal.Decimal, limit decimal.Decimal, orderSide environment.TradeSide) decimal.Decimal // Calculates the trading fees for an order on a specified market.
+	CalculateWithdrawFees(market *environment.Market, amount decimal.Decimal) decimal.Decimal                                                        // Calculates the withdrawal fees on a specified market.
 
 	GetBalance(symbol string) (*decimal.Decimal, error) // Gets the balance of the user of the specified currency.
 	GetDepositAddress(coinTicker string) (string, bool) // Gets the deposit address for the specified coin on the exchange, if exists.
 
 	FeedConnect(markets []*environment.Market) error // Connects to the feed of the exchange.
 
-	Withdraw(destinationAddress string, coinTicker string, amount float64) error // Performs a withdraw operation from the exchange to a destination address.
+	Withdraw(destinationAddress string, coinTicker string, amount decimal.Decimal) error // Performs a withdraw operation from the exchange to a destination address.
 
 	String() string // Returns a string representation of the object.
 	IsHistoricalSimulation() bool

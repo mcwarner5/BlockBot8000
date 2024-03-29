@@ -52,7 +52,26 @@ func (is PortfolioAnalysis) String() string {
 	pa_string += fmt.Sprintf("Initial Value in nuetral coin: %s %s", init_val.String(), is.NuetralCoin) + "\n"
 	pa_string += fmt.Sprintf("Current Value in nuetral coin: %s %s", curr_val.String(), is.NuetralCoin) + "\n"
 
+	curr__static_price := is.CurrentBalances.Balances[is.CurrentBalances.StaticCoin].MarketData.Last
+	curr_nuetral_price := is.CurrentBalances.Balances[is.NuetralCoin].MarketData.Last
+
+	var buy_and_hold_value decimal.Decimal
+
+	if is.CurrentBalances.StaticCoin == is.NuetralCoin {
+		buy_and_hold_value = init_val.Mul(curr_nuetral_price).Round(2)
+	} else {
+		buy_and_hold_value = init_val.Mul(curr_nuetral_price).Mul(curr__static_price).Round(2)
+	}
+
+	final_value := is.CurrentBalances.GetTotal().Round(2)
+	gains := final_value.Sub(buy_and_hold_value).Round(2)
+
+	pa_string += fmt.Sprintf("Initial Balance in static coin: %s %s", buy_and_hold_value.String(), is.CurrentBalances.StaticCoin) + "\n"
+	pa_string += fmt.Sprintf("Current Balance in static coin: %s %s", final_value.String(), is.CurrentBalances.StaticCoin) + "\n"
+
 	pa_string += fmt.Sprintf("Final difference in nuetral coin: %s %s", curr_diff.String(), is.NuetralCoin) + "\n"
+	pa_string += fmt.Sprintf("Final difference in static coin: %s %s", gains.String(), is.CurrentBalances.StaticCoin) + "\n"
+
 	pa_string += fmt.Sprintf("Final APR in nuetral coin: %s%%", is.CalcCurrAPR().String()) + "\n"
 	return pa_string
 }

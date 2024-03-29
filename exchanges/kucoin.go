@@ -119,8 +119,10 @@ func (wrapper *KucoinWrapper) GetOrderBook(market *environment.Market) (*environ
 }
 
 // BuyLimit performs a limit buy action.
-func (wrapper *KucoinWrapper) BuyLimit(market *environment.Market, amount, limit float64) (string, error) {
-	orderOid, err := wrapper.api.CreateOrder(MarketNameFor(market, wrapper), "BUY", limit, amount)
+func (wrapper *KucoinWrapper) BuyLimit(market *environment.Market, amount, limit decimal.Decimal) (string, error) {
+	f_amount, _ := amount.Float64()
+	f_limit, _ := limit.Float64()
+	orderOid, err := wrapper.api.CreateOrder(MarketNameFor(market, wrapper), "BUY", f_limit, f_amount)
 
 	if err != nil {
 		return "", err
@@ -130,13 +132,15 @@ func (wrapper *KucoinWrapper) BuyLimit(market *environment.Market, amount, limit
 }
 
 // BuyMarket performs a market buy action.
-func (wrapper *KucoinWrapper) BuyMarket(market *environment.Market, amount float64) (string, error) {
+func (wrapper *KucoinWrapper) BuyMarket(market *environment.Market, amount decimal.Decimal) (string, error) {
 	panic("Not Implemented")
 }
 
 // SellLimit performs a limit sell action.
-func (wrapper *KucoinWrapper) SellLimit(market *environment.Market, amount, limit float64) (string, error) {
-	orderOid, err := wrapper.api.CreateOrder(MarketNameFor(market, wrapper), "SELL", limit, amount)
+func (wrapper *KucoinWrapper) SellLimit(market *environment.Market, amount, limit decimal.Decimal) (string, error) {
+	f_amount, _ := amount.Float64()
+	f_limit, _ := limit.Float64()
+	orderOid, err := wrapper.api.CreateOrder(MarketNameFor(market, wrapper), "SELL", f_limit, f_amount)
 
 	if err != nil {
 		return "", err
@@ -146,7 +150,7 @@ func (wrapper *KucoinWrapper) SellLimit(market *environment.Market, amount, limi
 }
 
 // SellMarket performs a market sell action.
-func (wrapper *KucoinWrapper) SellMarket(market *environment.Market, amount float64) (string, error) {
+func (wrapper *KucoinWrapper) SellMarket(market *environment.Market, amount decimal.Decimal) (string, error) {
 	panic("Not Implemented")
 }
 
@@ -234,21 +238,21 @@ func (wrapper *KucoinWrapper) GetFilteredTrades(market *environment.Market, symb
 }
 
 // CalculateTradingFees calculates the trading fees for an order on a specified market.
-func (wrapper *KucoinWrapper) CalculateTradingFees(market *environment.Market, amount float64, limit float64, orderSide environment.TradeSide) float64 {
-	var feePercentage float64
+func (wrapper *KucoinWrapper) CalculateTradingFees(market *environment.Market, amount decimal.Decimal, limit decimal.Decimal, orderSide environment.TradeSide) decimal.Decimal {
+	var feePercentage decimal.Decimal
 	if orderSide == environment.Sell {
-		feePercentage = 0.0025
+		feePercentage = decimal.NewFromFloat(0.0025)
 	} else if orderSide == environment.Buy {
-		feePercentage = 0.0025
+		feePercentage = decimal.NewFromFloat(0.0025)
 	} else {
 		panic("Unknown trade type")
 	}
 
-	return amount * limit * feePercentage
+	return amount.Mul(limit).Mul(feePercentage)
 }
 
 // CalculateWithdrawFees calculates the withdrawal fees on a specified market.
-func (wrapper *KucoinWrapper) CalculateWithdrawFees(market *environment.Market, amount float64) float64 {
+func (wrapper *KucoinWrapper) CalculateWithdrawFees(market *environment.Market, amount decimal.Decimal) decimal.Decimal {
 	panic("Not Implemented")
 }
 
@@ -275,8 +279,8 @@ func (wrapper *KucoinWrapper) subscribeFeeds(market *environment.Market) error {
 }
 
 // Withdraw performs a withdraw operation from the exchange to a destination address.
-func (wrapper *KucoinWrapper) Withdraw(destinationAddress string, coinTicker string, amount float64) error {
-	_, err := wrapper.api.CreateWithdrawalApply(coinTicker, destinationAddress, amount)
+func (wrapper *KucoinWrapper) Withdraw(destinationAddress string, coinTicker string, amount decimal.Decimal) error {
+	_, err := wrapper.api.CreateWithdrawalApply(coinTicker, destinationAddress, amount.InexactFloat64())
 	if err != nil {
 		return err
 	}

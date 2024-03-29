@@ -77,7 +77,10 @@ func (wrapper *ExchangeWrapperSimulator) IsHistoricalSimulation() bool {
 }
 
 func (wrapper *ExchangeWrapperSimulator) GetCurrDate() time.Time {
-	return *wrapper.currDate
+	if wrapper.historicalSimulation && !wrapper.currDate.IsZero() {
+		return *wrapper.currDate
+	}
+	return time.Now()
 }
 
 func (wrapper *ExchangeWrapperSimulator) IncrementCurrDate() error {
@@ -313,8 +316,7 @@ func (wrapper *ExchangeWrapperSimulator) GetOrderBook(market *environment.Market
 	return order, nil
 }
 
-// BuyLimit here is just to implement the ExchangeWrapper Interface, do not use, use BuyMarket instead.
-func (wrapper *ExchangeWrapperSimulator) BuyLimit(market *environment.Market, amount float64, limit float64) (string, error) {
+func (wrapper *ExchangeWrapperSimulator) BuyLimit(market *environment.Market, amount decimal.Decimal, limit decimal.Decimal) (string, error) {
 	baseBalance, _ := wrapper.GetBalance(market.BaseCurrency)
 	quoteBalance, _ := wrapper.GetBalance(market.MarketCurrency)
 
@@ -324,12 +326,12 @@ func (wrapper *ExchangeWrapperSimulator) BuyLimit(market *environment.Market, am
 	}
 
 	totalQuote := decimal.Zero
-	remainingAmount := decimal.NewFromFloat(amount)
+	remainingAmount := amount
 	expense := decimal.Zero
 	avg_price := decimal.Zero
 
 	for _, ask := range orderbook.Asks {
-		if ask.Value.LessThan(decimal.NewFromFloat(limit)) {
+		if ask.Value.LessThan(limit) {
 			continue
 		}
 
@@ -356,6 +358,9 @@ func (wrapper *ExchangeWrapperSimulator) BuyLimit(market *environment.Market, am
 		}
 	}
 
+	fees := wrapper.CalculateTradingFees(market, totalQuote, avg_price, environment.Buy)
+	expense = expense.Add(fees)
+
 	wrapper.balances[market.BaseCurrency] = baseBalance.Add(totalQuote)
 	wrapper.balances[market.MarketCurrency] = quoteBalance.Sub(expense)
 
@@ -366,9 +371,9 @@ func (wrapper *ExchangeWrapperSimulator) BuyLimit(market *environment.Market, am
 
 	new_trade := environment.Trade{
 		Price:        avg_price,
-		AskQuantity:  decimal.NewFromFloat(amount),
+		AskQuantity:  amount,
 		FillQuantity: totalQuote,
-		Fees:         decimal.Zero,
+		Fees:         fees,
 		Market:       market.Name,
 		Side:         environment.Buy,
 		Status:       environment.Complete,
@@ -382,7 +387,7 @@ func (wrapper *ExchangeWrapperSimulator) BuyLimit(market *environment.Market, am
 }
 
 // SellLimit here is just to implement the ExchangeWrapper Interface, do not use, use SellMarket instead.
-func (wrapper *ExchangeWrapperSimulator) SellLimit(market *environment.Market, amount float64, limit float64) (string, error) {
+func (wrapper *ExchangeWrapperSimulator) SellLimit(market *environment.Market, amount decimal.Decimal, limit decimal.Decimal) (string, error) {
 	baseBalance, _ := wrapper.GetBalance(market.BaseCurrency)
 	quoteBalance, _ := wrapper.GetBalance(market.MarketCurrency)
 
@@ -392,7 +397,7 @@ func (wrapper *ExchangeWrapperSimulator) SellLimit(market *environment.Market, a
 	}
 
 	totalQuote := decimal.Zero
-	remainingAmount := decimal.NewFromFloat(amount)
+	remainingAmount := amount
 	gain := decimal.Zero
 	avg_price := decimal.Zero
 
@@ -401,7 +406,7 @@ func (wrapper *ExchangeWrapperSimulator) SellLimit(market *environment.Market, a
 	}
 
 	for _, bid := range orderbook.Bids {
-		if bid.Value.GreaterThan(decimal.NewFromFloat(limit)) {
+		if bid.Value.GreaterThan(limit) {
 			continue
 		}
 
@@ -421,6 +426,9 @@ func (wrapper *ExchangeWrapperSimulator) SellLimit(market *environment.Market, a
 		gain = gain.Add(bid.Quantity.Mul(bid.Value))
 	}
 
+	fees := wrapper.CalculateTradingFees(market, totalQuote, avg_price, environment.Sell)
+	gain = gain.Sub(fees)
+
 	wrapper.balances[market.BaseCurrency] = baseBalance.Sub(totalQuote)
 	wrapper.balances[market.MarketCurrency] = quoteBalance.Add(gain)
 
@@ -431,9 +439,9 @@ func (wrapper *ExchangeWrapperSimulator) SellLimit(market *environment.Market, a
 
 	new_trade := environment.Trade{
 		Price:        avg_price,
-		AskQuantity:  decimal.NewFromFloat(amount),
+		AskQuantity:  amount,
 		FillQuantity: totalQuote,
-		Fees:         decimal.Zero,
+		Fees:         fees,
 		Market:       market.Name,
 		Side:         environment.Sell,
 		Status:       environment.Complete,
@@ -447,7 +455,7 @@ func (wrapper *ExchangeWrapperSimulator) SellLimit(market *environment.Market, a
 }
 
 // BuyMarket performs a FAKE market buy action.
-func (wrapper *ExchangeWrapperSimulator) BuyMarket(market *environment.Market, amount float64) (string, error) {
+func (wrapper *ExchangeWrapperSimulator) BuyMarket(market *environment.Market, amount decimal.Decimal) (string, error) {
 	baseBalance, _ := wrapper.GetBalance(market.BaseCurrency)
 	quoteBalance, _ := wrapper.GetBalance(market.MarketCurrency)
 
@@ -457,7 +465,7 @@ func (wrapper *ExchangeWrapperSimulator) BuyMarket(market *environment.Market, a
 	}
 
 	totalQuote := decimal.Zero
-	remainingAmount := decimal.NewFromFloat(amount)
+	remainingAmount := amount
 	expense := decimal.Zero
 	avg_price := decimal.Zero
 
@@ -485,6 +493,9 @@ func (wrapper *ExchangeWrapperSimulator) BuyMarket(market *environment.Market, a
 		}
 	}
 
+	fees := wrapper.CalculateTradingFees(market, totalQuote, avg_price, environment.Buy)
+	expense = expense.Add(fees)
+
 	wrapper.balances[market.BaseCurrency] = baseBalance.Add(totalQuote)
 	wrapper.balances[market.MarketCurrency] = quoteBalance.Sub(expense)
 
@@ -494,9 +505,9 @@ func (wrapper *ExchangeWrapperSimulator) BuyMarket(market *environment.Market, a
 	}
 	new_trade := environment.Trade{
 		Price:        avg_price,
-		AskQuantity:  decimal.NewFromFloat(amount),
+		AskQuantity:  amount,
 		FillQuantity: totalQuote,
-		Fees:         decimal.Zero,
+		Fees:         fees,
 		Market:       market.Name,
 		Side:         environment.Buy,
 		Status:       environment.Complete,
@@ -510,7 +521,7 @@ func (wrapper *ExchangeWrapperSimulator) BuyMarket(market *environment.Market, a
 }
 
 // SellMarket performs a FAKE market buy action.
-func (wrapper *ExchangeWrapperSimulator) SellMarket(market *environment.Market, amount float64) (string, error) {
+func (wrapper *ExchangeWrapperSimulator) SellMarket(market *environment.Market, amount decimal.Decimal) (string, error) {
 	baseBalance, _ := wrapper.GetBalance(market.BaseCurrency)
 	quoteBalance, _ := wrapper.GetBalance(market.MarketCurrency)
 
@@ -520,7 +531,7 @@ func (wrapper *ExchangeWrapperSimulator) SellMarket(market *environment.Market, 
 	}
 
 	totalQuote := decimal.Zero
-	remainingAmount := decimal.NewFromFloat(amount)
+	remainingAmount := amount
 	gain := decimal.Zero
 	avg_price := decimal.Zero
 
@@ -545,6 +556,9 @@ func (wrapper *ExchangeWrapperSimulator) SellMarket(market *environment.Market, 
 		gain = gain.Add(bid.Quantity.Mul(bid.Value))
 	}
 
+	fees := wrapper.CalculateTradingFees(market, totalQuote, avg_price, environment.Sell)
+	gain = gain.Sub(fees)
+
 	wrapper.balances[market.BaseCurrency] = baseBalance.Sub(totalQuote)
 	wrapper.balances[market.MarketCurrency] = quoteBalance.Add(gain)
 
@@ -555,9 +569,9 @@ func (wrapper *ExchangeWrapperSimulator) SellMarket(market *environment.Market, 
 
 	new_trade := environment.Trade{
 		Price:        avg_price,
-		AskQuantity:  decimal.NewFromFloat(amount),
+		AskQuantity:  amount,
 		FillQuantity: totalQuote,
-		Fees:         decimal.Zero,
+		Fees:         fees,
 		Market:       market.Name,
 		Side:         environment.Sell,
 		Status:       environment.Complete,
@@ -627,12 +641,12 @@ func (wrapper *ExchangeWrapperSimulator) GetFilteredTrades(market *environment.M
 }
 
 // CalculateTradingFees calculates the trading fees for an order on a specified market.
-func (wrapper *ExchangeWrapperSimulator) CalculateTradingFees(market *environment.Market, amount float64, limit float64, orderSide environment.TradeSide) float64 {
+func (wrapper *ExchangeWrapperSimulator) CalculateTradingFees(market *environment.Market, amount decimal.Decimal, limit decimal.Decimal, orderSide environment.TradeSide) decimal.Decimal {
 	return wrapper.innerWrapper.CalculateTradingFees(market, amount, limit, orderSide)
 }
 
 // CalculateWithdrawFees calculates the withdrawal fees on a specified market.
-func (wrapper *ExchangeWrapperSimulator) CalculateWithdrawFees(market *environment.Market, amount float64) float64 {
+func (wrapper *ExchangeWrapperSimulator) CalculateWithdrawFees(market *environment.Market, amount decimal.Decimal) decimal.Decimal {
 	return wrapper.innerWrapper.CalculateWithdrawFees(market, amount)
 }
 
@@ -658,18 +672,17 @@ func (wrapper *ExchangeWrapperSimulator) FeedConnect(markets []*environment.Mark
 }
 
 // Withdraw performs a FAKE withdraw operation from the exchange to a destination address.
-func (wrapper *ExchangeWrapperSimulator) Withdraw(destinationAddress string, coinTicker string, amount float64) error {
-	if amount <= 0 {
+func (wrapper *ExchangeWrapperSimulator) Withdraw(destinationAddress string, coinTicker string, amount decimal.Decimal) error {
+	if amount.LessThanOrEqual(decimal.Zero) {
 		return errors.New("Withdraw amount must be > 0")
 	}
 
 	bal, exists := wrapper.balances[coinTicker]
-	amt := decimal.NewFromFloat(amount)
-	if !exists || amt.GreaterThan(bal) {
+	if !exists || amount.GreaterThan(bal) {
 		return errors.New("not enough balance")
 	}
 
-	wrapper.balances[coinTicker] = bal.Sub(amt)
+	wrapper.balances[coinTicker] = bal.Sub(amount)
 
 	return nil
 }

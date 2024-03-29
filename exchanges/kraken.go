@@ -112,7 +112,7 @@ func (wrapper *KrakenWrapper) GetOrderBook(market *environment.Market) (*environ
 }
 
 // BuyLimit performs a limit buy action.
-func (wrapper *KrakenWrapper) BuyLimit(market *environment.Market, amount float64, limit float64) (string, error) {
+func (wrapper *KrakenWrapper) BuyLimit(market *environment.Market, amount decimal.Decimal, limit decimal.Decimal) (string, error) {
 	orderNumber, err := wrapper.api.AddOrder(MarketNameFor(market, wrapper), "buy", "limit", fmt.Sprint(amount), map[string]string{"price": fmt.Sprint(limit)})
 	if err != nil {
 		return "", err
@@ -123,7 +123,7 @@ func (wrapper *KrakenWrapper) BuyLimit(market *environment.Market, amount float6
 // SellLimit performs a limit sell action.
 //
 // NOTE: In kraken buy and sell orders behave the same (the go kraken api automatically puts it on correct side)
-func (wrapper *KrakenWrapper) SellLimit(market *environment.Market, amount float64, limit float64) (string, error) {
+func (wrapper *KrakenWrapper) SellLimit(market *environment.Market, amount decimal.Decimal, limit decimal.Decimal) (string, error) {
 	orderNumber, err := wrapper.api.AddOrder(MarketNameFor(market, wrapper), "sell", "limit", fmt.Sprint(amount), map[string]string{"price": fmt.Sprint(limit)})
 	if err != nil {
 		return "", err
@@ -132,7 +132,7 @@ func (wrapper *KrakenWrapper) SellLimit(market *environment.Market, amount float
 }
 
 // BuyMarket performs a market buy action.
-func (wrapper *KrakenWrapper) BuyMarket(market *environment.Market, amount float64) (string, error) {
+func (wrapper *KrakenWrapper) BuyMarket(market *environment.Market, amount decimal.Decimal) (string, error) {
 	orderNumber, err := wrapper.api.AddOrder(MarketNameFor(market, wrapper), "buy", "market", fmt.Sprint(amount), map[string]string{})
 	if err != nil {
 		return "", err
@@ -141,7 +141,7 @@ func (wrapper *KrakenWrapper) BuyMarket(market *environment.Market, amount float
 }
 
 // SellMarket performs a market sell action.
-func (wrapper *KrakenWrapper) SellMarket(market *environment.Market, amount float64) (string, error) {
+func (wrapper *KrakenWrapper) SellMarket(market *environment.Market, amount decimal.Decimal) (string, error) {
 	orderNumber, err := wrapper.api.AddOrder(MarketNameFor(market, wrapper), "sell", "market", fmt.Sprint(amount), map[string]string{})
 	if err != nil {
 		return "", err
@@ -318,21 +318,21 @@ func (wrapper *KrakenWrapper) GetFilteredTrades(market *environment.Market, symb
 // CalculateTradingFees calculates the trading fees for an order on a specified market.
 //
 //	NOTE: In Kraken fees are currently hardcoded.
-func (wrapper *KrakenWrapper) CalculateTradingFees(market *environment.Market, amount float64, limit float64, orderSide environment.TradeSide) float64 {
-	var feePercentage float64
+func (wrapper *KrakenWrapper) CalculateTradingFees(market *environment.Market, amount decimal.Decimal, limit decimal.Decimal, orderSide environment.TradeSide) decimal.Decimal {
+	var feePercentage decimal.Decimal
 	if orderSide == environment.Sell {
-		feePercentage = 0.0016
+		feePercentage = decimal.NewFromFloat(0.0016)
 	} else if orderSide == environment.Buy {
-		feePercentage = 0.0026
+		feePercentage = decimal.NewFromFloat(0.0026)
 	} else {
 		panic("Unknown trade type")
 	}
 
-	return amount * limit * feePercentage
+	return amount.Mul(limit).Mul(feePercentage)
 }
 
 // CalculateWithdrawFees calculates the withdrawal fees on a specified market.
-func (wrapper *KrakenWrapper) CalculateWithdrawFees(market *environment.Market, amount float64) float64 {
+func (wrapper *KrakenWrapper) CalculateWithdrawFees(market *environment.Market, amount decimal.Decimal) decimal.Decimal {
 	panic("Not Implemented")
 }
 
@@ -347,7 +347,7 @@ func (wrapper *KrakenWrapper) subscribeMarketSummaryFeed(market *environment.Mar
 }
 
 // Withdraw performs a withdraw operation from the exchange to a destination address.
-func (wrapper *KrakenWrapper) Withdraw(destinationAddress string, coinTicker string, amount float64) error {
+func (wrapper *KrakenWrapper) Withdraw(destinationAddress string, coinTicker string, amount decimal.Decimal) error {
 	panic("Not Supported")
 }
 func (wrapper *KrakenWrapper) IsHistoricalSimulation() bool {

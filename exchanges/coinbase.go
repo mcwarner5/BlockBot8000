@@ -156,7 +156,7 @@ func (wrapper *CoinbaseWrapper) orderbookFromREST(market *environment.Market) (*
 }
 
 // BuyLimit performs a limit buy action.
-func (wrapper *CoinbaseWrapper) BuyLimit(market *environment.Market, amount float64, limit float64) (string, error) {
+func (wrapper *CoinbaseWrapper) BuyLimit(market *environment.Market, amount decimal.Decimal, limit decimal.Decimal) (string, error) {
 	amount_str := fmt.Sprint(amount)
 	limit_str := fmt.Sprint(limit)
 	order_confg := model.CreateOrderRequestOrderConfiguration{
@@ -193,7 +193,7 @@ func (wrapper *CoinbaseWrapper) BuyLimit(market *environment.Market, amount floa
 }
 
 // SellLimit performs a limit sell action.
-func (wrapper *CoinbaseWrapper) SellLimit(market *environment.Market, amount float64, limit float64) (string, error) {
+func (wrapper *CoinbaseWrapper) SellLimit(market *environment.Market, amount decimal.Decimal, limit decimal.Decimal) (string, error) {
 	amount_str := fmt.Sprint(amount)
 	limit_str := fmt.Sprint(limit)
 	order_confg := model.CreateOrderRequestOrderConfiguration{
@@ -231,7 +231,7 @@ func (wrapper *CoinbaseWrapper) SellLimit(market *environment.Market, amount flo
 }
 
 // BuyMarket performs a market buy action.
-func (wrapper *CoinbaseWrapper) BuyMarket(market *environment.Market, amount float64) (string, error) {
+func (wrapper *CoinbaseWrapper) BuyMarket(market *environment.Market, amount decimal.Decimal) (string, error) {
 	amount_str := fmt.Sprint(amount)
 	order_confg := model.CreateOrderRequestOrderConfiguration{
 		MarketMarketIoc: &model.CreateOrderRequestOrderConfigurationMarketMarketIoc{
@@ -265,7 +265,7 @@ func (wrapper *CoinbaseWrapper) BuyMarket(market *environment.Market, amount flo
 }
 
 // SellMarket performs a market sell action.
-func (wrapper *CoinbaseWrapper) SellMarket(market *environment.Market, amount float64) (string, error) {
+func (wrapper *CoinbaseWrapper) SellMarket(market *environment.Market, amount decimal.Decimal) (string, error) {
 	amount_str := fmt.Sprint(amount)
 	order_confg := model.CreateOrderRequestOrderConfiguration{
 		MarketMarketIoc: &model.CreateOrderRequestOrderConfigurationMarketMarketIoc{
@@ -543,21 +543,21 @@ func (wrapper *CoinbaseWrapper) GetFilteredTrades(market *environment.Market, sy
 }
 
 // NOTE: In Coinbase fees are currently hardcoded.
-func (wrapper *CoinbaseWrapper) CalculateTradingFees(market *environment.Market, amount float64, limit float64, orderSide environment.TradeSide) float64 {
-	var feePercentage float64
+func (wrapper *CoinbaseWrapper) CalculateTradingFees(market *environment.Market, amount decimal.Decimal, limit decimal.Decimal, orderSide environment.TradeSide) decimal.Decimal {
+	var feePercentage decimal.Decimal
 	if orderSide == environment.Sell {
-		feePercentage = 0.0025
+		feePercentage = decimal.NewFromFloat(0.0026)
 	} else if orderSide == environment.Buy {
-		feePercentage = 0.0025
+		feePercentage = decimal.NewFromFloat(0.0026)
 	} else {
 		panic("Unknown trade type")
 	}
 
-	return amount * limit * feePercentage
+	return amount.Mul(limit).Mul(feePercentage)
 }
 
 // CalculateWithdrawFees calculates the withdrawal fees on a specified market.
-func (wrapper *CoinbaseWrapper) CalculateWithdrawFees(market *environment.Market, amount float64) float64 {
+func (wrapper *CoinbaseWrapper) CalculateWithdrawFees(market *environment.Market, amount decimal.Decimal) decimal.Decimal {
 	panic("CalculateWithdrawFees Not Implemented for Coinbase wrapper yet")
 }
 
@@ -567,7 +567,7 @@ func (wrapper *CoinbaseWrapper) FeedConnect(markets []*environment.Market) error
 }
 
 // Withdraw performs a withdraw operation from the exchange to a destination address.
-func (wrapper *CoinbaseWrapper) Withdraw(destinationAddress string, coinTicker string, amount float64) error {
+func (wrapper *CoinbaseWrapper) Withdraw(destinationAddress string, coinTicker string, amount decimal.Decimal) error {
 	panic("subscribeOrderbookFeed Not supported on Coinbase wrapper yet")
 }
 
